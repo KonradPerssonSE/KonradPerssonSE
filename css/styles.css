@@ -41,6 +41,7 @@ header{padding:4rem 1.25rem;margin:0 auto;}
 @media (min-width: 48em) {
   p            { font-size: 1.2rem; }
   ul           { font-size: 1.2rem; }
+                  header{max-width:54em}
   header p     { font-size: 1.3rem; }
 }
 
