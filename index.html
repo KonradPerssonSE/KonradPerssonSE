@@ -12,14 +12,12 @@
 
         <meta property="og:title" content="Hej! / Konrad Persson">
         <meta property="og:description" content="
-
         Här delar jag mina tankar, erfarenheter och min portfolio bestående av: 
         - Bra kommunikation (rätt information vid rätt tillfälle till rätt person).
         - Tydlighet och respekt inför kunden. 
         - Det bästa valet av teknik för det specifika behovet.
         - Underbyggd & genomtänkt design med syfte.
         - Beprövad marknadsföring, metoder och mätbara förbättrade resultat.
-
         ">
         <meta property="og:type" content="website">
         <meta property="og:url" content="https://konradpersson.se/">
@@ -35,58 +33,15 @@
         
         <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Alegreya:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
         
-        <style>
+        <!--  Site-wide CSS  -->
+        <link rel="stylesheet" href="/css/styles.css" />
 
-            :root{
-                --bg:#f9f6f0;
-                --text:#141414;
-                --link:#118AB2;
-                --max:48em;
-                --font-serif:"IBM Plex Serif",serif;
-                --font-sans:"IBM Plex Sans",sans-serif;
-                --font-body:"Alegreya",serif;
-                --font-mono:"IBM Plex Mono",monospace
-            }
+        <!--  Web Components  -->
+        <script type="module" src="/js/components.js" defer></script>
 
-            *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        <!--  Common helpers (optional)  -->
+        <script type="module" src="/js/common.js" defer></script>
 
-            body{background:var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.6;-webkit-font-smoothing:antialiased}
-
-            p{font-size:1.1rem;margin-bottom:0.65em;}
-
-            a{color:var(--link);text-decoration:none}
-
-            h1,h2{font-family:var(--font-serif);font-weight:500;line-height:1.2;margin-top:0.5em;margin-bottom:0.4em;}
-            h3{font-family:var(--font-sans);font-weight:500;}
-            h4{font-family:var(--font-serif);font-weight:700;}
-
-            ul{list-style-position: inside;font-size:1.1em;margin-bottom: 0.45em;}
-            li{margin-bottom: 0.25em;margin-top: 0.2em;}
-
-            section{padding:2rem 1.25rem;margin:0 auto;}
-
-            figure{margin:2rem 0}
-            figcaption{font-family:var(--font-mono);font-size:.875rem;margin-top:.5rem}
-
-            header{padding:4rem 1.25rem;margin:0 auto;}
-            header h1{font-size:clamp(2.4rem,6vw,4rem)}
-            header p{font-size:1.2rem;margin:1rem auto 0}
-
-            @media(min-width:48em){
-                p {font-size:1.2rem}
-
-                section{max-width:50em}
-                
-                header{max-width:54em}
-                header p {font-size:1.3rem}
-                
-                ul{font-size:1.2rem}
-            }
-
-            .animate{opacity:0.8;transform:translateY(3em);transition:opacity .22s cubic-bezier(0.87, 0, 0.13, 1),transform .22s cubic-bezier(0.34, 1.56, 0.64, 1)}
-            .reveal{opacity:1;transform:none}
-
-        </style>
     </head>
     
     <body>
@@ -95,7 +50,11 @@
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W7TXPQK3"
         height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <!-- End Google Tag Manager (noscript) -->
-    
+        
+        <site-header></site-header>
+        
+        <site-nav></site-nav>
+        
         <header>
             <h1>Hej!</h1>
             <p>Välkommen till min plattform för att samla och dela med mig av diverse portfolio-arbeten – Projekt och Kundarbeten, Resultat & Recensioner.</p>
@@ -154,11 +113,6 @@
 
         </main>
 
-        <footer><pre>- This page was pushed to live by a GitHub Action.</pre></footer>
-
-        <script>
-        const io=new IntersectionObserver((e)=>{e.forEach(el=>{if(el.isIntersecting){el.target.classList.add('reveal');io.unobserve(el.target)}})},{threshold:.1});
-        document.querySelectorAll('.animate').forEach(s=>io.observe(s));
-        </script>
+        <site-footer></site-footer>
     </body>
-</html>
+</html>>
