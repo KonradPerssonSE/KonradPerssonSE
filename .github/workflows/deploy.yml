@@ -1,22 +1,36 @@
-name: Deploy to FTP
+name: Deploy to FTP (production)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "deploy-${{ github.ref }}"
+  cancel-in-progress: true
 
 jobs:
   ftp-deploy:
+    name: Upload site over FTPS
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v3
+      - name: Check out source code
+        uses: actions/checkout@v4
 
-      - name: Deploy with FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: Sync files
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_DIR }}
+          server:       ${{ secrets.FTP_SERVER }}
+          protocol:     ftps
+          username:     ${{ secrets.FTP_USERNAME }}
+          password:     ${{ secrets.FTP_PASSWORD }}
+          server-dir:   ${{ secrets.FTP_DIR }}
+          # local-dir: ./dist
+          exclude: |
+             **/.git*
+             **/node_modules/**
