@@ -30,7 +30,9 @@ jobs:
           username:     ${{ secrets.FTP_USERNAME }}
           password:     ${{ secrets.FTP_PASSWORD }}
           server-dir:   ${{ secrets.FTP_DIR }}
-          # local-dir: ./dist
+          # local-dir: ./dist/
           exclude: |
-             **/.git*
-             **/node_modules/**
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .ftp-deploy-sync-state.json
