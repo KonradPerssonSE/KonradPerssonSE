@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lilla Österrike – Café & Alpackavandring</title>
+<style>
+/* ---------- Design tokens ---------- */
+:root{
+  --cream:#FAF7F0; --coffee:#2A2A2A; --forest:#5B6B34;
+  --red:#ED1C24;   --gray:#7E807C;  --max:960px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* ---------- Hero carousel ---------- */
+.hero{
+  overflow-x:auto; scroll-snap-type:x mandatory; display:flex; height:70vh;
+}
+.hero figure{min-width:100%; position:relative; scroll-snap-align:center;}
+.hero img{object-fit:cover;width:100%;height:100%;}
+.hero figcaption{
+  position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;
+  flex-direction:column;justify-content:center;align-items:center;color:#fff;text-align:center;padding:1rem;
+}
+.hero h1{font-size:2.4rem;margin-bottom:.4rem;letter-spacing:.03em;}
+.hero p{font-size:1.1rem;max-width:26ch;margin-bottom:.8rem;}
+.btn{background:var(--red);border:none;color:#fff;padding:.8rem 1.4rem;border-radius:4px;text-decoration:none;}
+
+/* ---------- Sections ---------- */
+section{padding:3.2rem 1rem;background:var(--cream);}
+.inner{max-width:var(--max);margin:auto;}
+h2{color:var(--forest);font-size:1.8rem;margin-bottom:1.2rem;}
+p,li{line-height:1.6;margin-bottom:1rem;font-size:1rem;color:var(--coffee);}
+ul{padding-left:1rem}
+
+/* ---------- Menu table ---------- */
+.menu-grid{display:grid;gap:1.5rem}
+.menu-grid ul{list-style:none;padding:0}
+.menu-grid li{display:flex;justify-content:space-between;border-bottom:1px dashed var(--gray);padding:.4rem 0}
+.menu-grid li span{white-space:nowrap}
+
+/* ---------- Wave divider ---------- */
+.wave{display:block;height:80px;background:url('data:image/svg+xml, \
+<svg xmlns="http://www.w3.org/2000/svg" viewBox=\"0 0 1440 80\"><path fill=\"%23FAF7F0\" d=\"M0,0 C360,80 720,0 1080,80 L1440,0 L1440,80 L0,80Z\"></path></svg>') center / cover no-repeat;}
+
+/* ---------- Utility ---------- */
+.flag{font-size:1.05em;margin-left:.3em}
+
+/* ---------- Footer ---------- */
+footer{background:var(--coffee);color:#fff;text-align:center;padding:2rem 1rem;font-size:.9rem;}
+footer a{color:#fff;text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<!-- ====== HERO / ATF ====== -->
+<div class="hero">
+  <figure>
+    <img src="https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?auto=format&fit=crop&w=1400&q=60" alt="Café Lilla Österrike">
+    <figcaption>
+      <h1>Lilla Österrike</h1>
+      <p>Österrikiska bakverk 🇦🇹 • lokal gårdskänsla 🇸🇪 • alpackavandring 🦙</p>
+      <a href="#book" class="btn">Boka vandring</a>
+    </figcaption>
+  </figure>
+  <figure>
+    <img src="https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&w=1400&q=60" alt="Apfelstrudel">
+    <figcaption><h1>Hemgjorda bakverk</h1></figcaption>
+  </figure>
+  <figure>
+    <img src="https://images.unsplash.com/photo-1502741126161-b048400d4f19?auto=format&fit=crop&w=1400&q=60" alt="Alpackor i hage">
+    <figcaption><h1>Din egen alpacka väntar</h1></figcaption>
+  </figure>
+</div>
+
+<!-- quick info bar -->
+<section style="padding:1.4rem 1rem 2rem">
+  <div class="inner" style="display:flex;flex-wrap:wrap;gap:1rem;font-weight:500">
+    <div>🕑 Öppet: Sön–Tor 13-18</div>
+    <div>📍 Östensbo 101, Österbybruk <a href="https://goo.gl/maps/xyz" style="margin-left:.5rem" class="btn" aria-label="Hitta hit">Hitta&nbsp;hit</a></div>
+    <div>🍰 Ett litet men <em>oemotståndligt</em> sortiment</div>
+  </div>
+</section>
+
+<span class="wave"></span>
+
+<!-- ====== CAFÉ ====== -->
+<section id="cafe">
+  <div class="inner">
+    <h2>Cafémeny</h2>
+    <div class="menu-grid">
+      <ul>
+        <li>Apfelstrudel<span>58 kr 🇦🇹</span></li>
+        <li>Sacher-chokladtårta<span>64 kr 🇦🇹</span></li>
+        <li>Linzersnitt<span>45 kr 🇦🇹</span></li>
+        <li>Äppelkaka<span>48 kr 🇸🇪</span></li>
+      </ul>
+      <ul>
+        <li>Rostad smörgås ost & skinka<span>69 kr</span></li>
+        <li>Vegansk wrap<span>75 kr 🌱</span></li>
+        <li>Glutenfri brownie<span>55 kr 🌾🚫</span></li>
+      </ul>
+      <ul>
+        <li>Bryggkaffe (påtår ingår)<span>32 kr</span></li>
+        <li>Presskaffe single origin<span>45 kr</span></li>
+        <li>Té (flertal sorter)<span>30 kr</span></li>
+      </ul>
+    </div>
+
+    <h3 style="margin-top:2.5rem">Egna ägg 🥚</h3>
+    <p>Alla bakverk görs med färska ägg från våra egna frigående höns som delar gård med alpackorna.</p>
+
+    <h3 style="margin-top:2rem">Digitalt kaffekort ☕</h3>
+    <p>Ladda ner vårt stämpelkort till mobilen — sjätte koppen är gratis.</p>
+    <a href="#" class="btn">Ladda ner</a>
+  </div>
+</section>
+
+<span class="wave" style="transform:scaleY(-1);"></span>
+
+<!-- ====== ALPACA WALK ====== -->
+<section id="book">
+  <div class="inner">
+    <h2>Alpackavandring&nbsp;🦙</h2>
+    <p>Besök alpackorna i hagen, låt en av dem välja dig, och ta en timmes lugn promenad genom lingonris & mossklädda stigar. Grillad korv och fika ingår.</p>
+    <ul>
+      <li>Turer varje morgon & kväll utanför kaféets öppettider</li>
+      <li>450 kr / person • max 8 deltagare</li>
+      <li>Boka via <a href="mailto:info@lillaosterike.se">info@lillaosterike.se</a> eller 070-000 00 00</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ====== ACCOMMODATION (PAYWALL) ====== -->
+<section style="background:#fff">
+  <div class="inner">
+    <h2>Boende, Bastu & Badtunna</h2>
+    <p>Ett nyrenoverat boende på gården kan bokas via Booking.com eller Airbnb. Vedeldad bastu & badtunna ingår.</p>
+    <a href="#" class="btn">Logga in för att boka</a>
+    <small style="display:block;margin-top:.5rem;color:var(--gray)">🔒 Detta demosegment är låst. Kontakta oss för full version.</small>
+  </div>
+</section>
+
+<!-- ====== DEMO NOTE & PRICE ====== -->
+<section>
+  <div class="inner" style="text-align:center">
+    <h2>Detta är en demo</h2>
+    <p>Gillar du vad du ser? <br>Färdigställande, publicering & två revisionsrundor: <strong>3 400 kr</strong>.</p>
+    <a href="mailto:info@semurai.se" class="btn">Låt oss prata vidare</a>
+  </div>
+</section>
+
+<footer>
+  © 2025 Semurai • Statisk, energisnål & hostas med grön el
+</footer>
+
+</body>
+</html>
