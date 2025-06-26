@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Notepad</title>
+<title>📝Notepad</title>
 <style>
 html,body{margin:0;height:100%}
 #workspace{display:grid;height:100vh;width:100vw}
