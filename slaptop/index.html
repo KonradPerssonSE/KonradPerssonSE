@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Släptop: Mission Brief</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- JS Libraries -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom Styles & Tailwind Configuration -->
+    <style>
+        @font-face {
+            font-family: 'Departure Mono';
+            src: url('https://departuremono.com/DepartureMono-Regular.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /* --- BASE & BOILERPLATE STYLES --- */
+        body {
+            background-color: #f9f6f0; /* Broken White from Boilerplate */
+            color: #141414;
+        }
+        .card-border {
+            border: 1px solid #e0d5c5;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* --- PROJECT SLÄPTOP SPECIFIC STYLES --- */
+
+        /* Post-it Note Style */
+        .post-it {
+            background-color: #FADCA8; /* Default color from Boilerplate */
+            color: #141414;
+            border: 1px solid #d1b78a;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 200px;
+            box-shadow: 3px 3px 5px rgba(0,0,0,0.1);
+        }
+        .post-it-header, .post-it-footer {
+            font-family: 'Departure Mono', 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            opacity: 0.8;
+        }
+        .post-it-body {
+            font-family: 'Departure Mono', 'IBM Plex Mono', monospace;
+            font-size: 14px;
+            flex-grow: 1;
+            padding: 0.5rem 0;
+        }
+
+        /* SOP / Work Log Section Styles */
+        .sop-section {
+            background-color: #fdfdfa;
+            border: 1px solid #dcd5c9;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            font-family: 'Departure Mono', 'IBM Plex Mono', monospace;
+        }
+        .sop-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #333;
+        }
+        .sop-table th, .sop-table td {
+            border: 1px solid #333;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        .sop-table th {
+            background-color: #EAE3D9;
+        }
+        .sop-title {
+            font-family: 'Departure Mono', 'IBM Plex Mono', monospace;
+            font-weight: bold;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .ascii-art {
+            white-space: pre;
+            font-family: 'Departure Mono', 'IBM Plex Mono', monospace;
+            display: block;
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 2px solid #333;
+            background-color: #fdfdfa;
+            min-height: 100px;
+        }
+
+        /* OS UI Mockup Styles */
+        .os-desktop {
+            background-color: #008080; /* Classic Teal */
+            border: 2px solid #fff;
+            box-shadow: inset -2px -2px 0px #404040, inset 2px 2px 0px #C0C0C0;
+            padding: 1rem;
+            height: 70vh;
+            position: relative;
+        }
+        .os-taskbar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #C0C0C0; /* Silver */
+            border-top: 2px solid #fff;
+            padding: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .os-start-btn {
+            border: 2px solid #fff;
+            box-shadow: inset -1px -1px 0px #404040, inset 1px 1px 0px #fff;
+            background-color: #C0C0C0;
+            font-weight: bold;
+            padding: 2px 10px;
+        }
+        .os-clock {
+            border: 2px solid #404040;
+            box-shadow: inset 1px 1px 0px #fff;
+            padding: 2px 10px;
+            font-size: 14px;
+        }
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 80px;
+            color: white;
+            text-align: center;
+            font-size: 14px;
+        }
+        .desktop-icon i {
+            width: 48px;
+            height: 48px;
+        }
+        .terminal-window {
+            background: #C0C0C0;
+            border: 2px solid #fff;
+            box-shadow: inset -2px -2px 0px #404040, inset 2px 2px 0px #C0C0C0;
+            width: 60%;
+        }
+        .terminal-title-bar {
+            background: linear-gradient(to right, #000080, #1084d0);
+            color: white;
+            padding: 4px 8px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .terminal-body {
+            background-color: #141414;
+            color: #f0f0f0;
+            padding: 1rem;
+            height: 250px;
+            overflow-y: auto;
+        }
+    </style>
+
+    <script>
+        // Tailwind Configuration
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'serif': ['IBM Plex Serif', 'serif'],
+                        'sans': ['Alegreya', 'serif'],
+                        'mono': ['IBM Plex Mono', 'monospace'],
+                        'nav': ['Inter', 'sans-serif'],
+                        'meta': ['Departure Mono', 'IBM Plex Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-sans antialiased">
+
+    <div class="container mx-auto p-4 sm:p-8 lg:p-12">
+
+        <!-- ====================================================================== -->
+        <!-- SECTION 1: PROJECT DESCRIPTION                                         -->
+        <!-- ====================================================================== -->
+        <section id="slaptop-intro" class="mb-16">
+            <div class="flex flex-wrap md:flex-nowrap gap-8">
+                <!-- Main Project Info (6/10 width) -->
+                <div class="w-full md:w-7/12">
+                    <h1 class="font-serif text-5xl font-bold mb-4">Project Släptop</h1>
+                    <p class="font-sans text-lg text-gray-700 leading-relaxed">
+                        An initiative to merge high-fidelity branding with retro-utilitarian UI design. This project serves as a comprehensive test case, combining the clean aesthetics of the "Visual Learning Boilerplate" with the thematic, engaging elements of the "Inbox Zero Mission Control" to produce a hybrid artifact suitable for complex project planning and standard operating procedures.
+                    </p>
+                </div>
+                <!-- Metadata (3/10 width) -->
+                <div class="w-full md:w-4/12 font-meta text-sm border-l-2 border-gray-300 pl-6">
+                    <h2 class="font-bold text-base mb-2">DOCUMENT METADATA</h2>
+                    <p><strong>PROJECT ID:</strong> SLÄP-2025-01</p>
+                    <p><strong>STATUS:</strong> IN PROGRESS</p>
+                    <p><strong>VERSION:</strong> 1.0</p>
+                    <p><strong>COMMANDER:</strong> K. Persson</p>
+                    <p><strong>LAST MODIFIED:</strong> <span id="last-modified"></span></p>
+                </div>
+            </div>
+
+            <!-- Post-it Notes Section -->
+            <div class="mt-12 flex space-x-6 overflow-x-auto pb-4">
+                <div class="post-it flex-shrink-0 w-64">
+                    <div class="post-it-header">NOTE-01 / UX</div>
+                    <div class="post-it-body">Ensure the OS UI feels nostalgic but remains readable. Don't sacrifice clarity for aesthetic.</div>
+                    <div class="post-it-footer">PRIORITY: HIGH</div>
+                </div>
+                <div class="post-it flex-shrink-0 w-64" style="background-color: #E57C8F; color: white;">
+                    <div class="post-it-header">NOTE-02 / DEPLOY</div>
+                    <div class="post-it-body">Final artifact must be a single, self-contained HTML file. All assets loaded from CDN.</div>
+                    <div class="post-it-footer">PRIORITY: CRITICAL</div>
+                </div>
+                <div class="post-it flex-shrink-0 w-64">
+                    <div class="post-it-header">NOTE-03 / SCOPE</div>
+                    <div class="post-it-body">Limit SOP to 9 steps for this proof-of-concept. Can be expanded later.</div>
+                    <div class="post-it-footer">PRIORITY: NORMAL</div>
+                </div>
+                <div class="post-it flex-shrink-0 w-96"> <!-- Double-width -->
+                    <div class="post-it-header">NOTE-04 / FUTURE</div>
+                    <div class="post-it-body">Consider adding JavaScript interactivity to the desktop icons and start menu in a future version (v2). For now, they are static visual elements.</div>
+                    <div class="post-it-footer">PRIORITY: LOW</div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-t-2 border-dashed border-gray-300 my-20">
+
+        <!-- ====================================================================== -->
+        <!-- SECTION 2: SOP + WORK LOG                                              -->
+        <!-- ====================================================================== -->
+        <section id="sop" class="sop-section p-6 sm:p-10">
+            <h2 class="sop-title text-2xl">// STANDARD OPERATING PROCEDURE: SLÄPTOP ASSEMBLY //</h2>
+            
+            <!-- Step 1 -->
+            <div class="mb-12">
+                <h3 class="sop-title">// STEP 01: FOUNDATION & STYLING //</h3>
+                <p class="mb-4">Commander, the first step is to establish the foundational HTML structure and merge the stylistic DNA of our two source artifacts. This involves setting up the core document, importing all necessary fonts and libraries, and defining the primary CSS classes that will govern the new hybrid aesthetic.</p>
+                <table class="sop-table text-sm">
+                    <thead><tr><th>DESCRIPTION</th><th>ACCEPTANCE CRITERIA</th><th>STATUS</th></tr></thead>
+                    <tbody>
+                        <tr><td>Create base HTML file.</td><td>Document renders without errors.</td><td class="text-green-600 font-bold">COMPLETE</td></tr>
+                        <tr><td>Combine font libraries.</td><td>All 5 fonts are available for use.</td><td class="text-green-600 font-bold">COMPLETE</td></tr>
+                        <tr><td>Define hybrid CSS classes.</td><td>Post-it and SOP styles are implemented.</td><td class="text-green-600 font-bold">COMPLETE</td></tr>
+                    </tbody>
+                </table>
+                <pre class="ascii-art">
+// ASCII art representing CSS code structure
+// User can fill this in with box-drawing characters
+                </pre>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="mb-12">
+                <h3 class="sop-title">// STEP 02: OS UI MOCKUP CONSTRUCTION //</h3>
+                <p class="mb-4">With the foundation laid, we will construct the Windows-inspired OS desktop. This is a purely visual component designed to evoke a sense of nostalgia and provide a unique container for key information. Focus on structural accuracy and the feel of the classic UI.</p>
+                <table class="sop-table text-sm">
+                    <thead><tr><th>DESCRIPTION</th><th>ACCEPTANCE CRITERIA</th><th>STATUS</th></tr></thead>
+                    <tbody>
+                        <tr><td>Build desktop container.</td><td>Desktop has correct color and borders.</td><td class="text-orange-500 font-bold">IN-PROGRESS</td></tr>
+                        <tr><td>Create taskbar and start menu.</td><td>Taskbar is fixed to the bottom with clock.</td><td class="text-gray-500">PENDING</td></tr>
+                        <tr><td>Design terminal window component.</td><td>Terminal window is styled correctly.</td><td class="text-gray-500">PENDING</td></tr>
+                    </tbody>
+                </table>
+                <pre class="ascii-art">
+// ASCII art representing a window layout
+// User can fill this in with box-drawing characters
+                </pre>
+            </div>
+            <!-- Add more steps as needed... -->
+        </section>
+
+        <hr class="border-t-2 border-dashed border-gray-300 my-20">
+
+        <!-- ====================================================================== -->
+        <!-- SECTION 3: MOCKUP OS DESKTOP UI                                        -->
+        <!-- ====================================================================== -->
+        <section id="os-ui" class="mb-16">
+            <h2 class="font-serif text-4xl mb-6">Mockup OS Desktop</h2>
+            <div class="os-desktop flex flex-col flex-wrap content-start gap-4">
+                
+                <!-- Desktop Icons -->
+                <div class="desktop-icon">
+                    <i data-lucide="file-code-2"></i>
+                    <span>Project_SOP.html</span>
+                </div>
+                <div class="desktop-icon">
+                    <i data-lucide="folder"></i>
+                    <span>Assets</span>
+                </div>
+                <div class="desktop-icon">
+                    <i data-lucide="file-image"></i>
+                    <span>Inspiration.png</span>
+                </div>
+                <div class="desktop-icon">
+                    <i data-lucide="trash-2"></i>
+                    <span>Recycle Bin</span>
+                </div>
+
+                <!-- Terminal Window -->
+                <div class="terminal-window mt-4">
+                    <div class="terminal-title-bar">
+                        <span>C:\WINDOWS\System32\cmd.exe</span>
+                    </div>
+                    <div class="terminal-body font-mono text-sm">
+                        <p>Project Släptop [Version 1.0.2025]</p>
+                        <p>(c) 2030V-COM. All rights reserved.</p>
+                        <br>
+                        <p>C:\Users\Konrad&gt; <span class="animate-pulse">_</span></p>
+                    </div>
+                </div>
+
+                <!-- Taskbar -->
+                <div class="os-taskbar">
+                    <button class="os-start-btn flex items-center gap-2">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        Start
+                    </button>
+                    <div id="os-clock" class="os-clock">12:00:00 PM</div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Initialize Icons ---
+        lucide.createIcons();
+
+        // --- Update dynamic dates/times ---
+        const lastModifiedEl = document.getElementById('last-modified');
+        if(lastModifiedEl) {
+            lastModifiedEl.textContent = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        const clockEl = document.getElementById('os-clock');
+        function updateClock() {
+            if (clockEl) {
+                clockEl.textContent = new Date().toLocaleTimeString('en-US');
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    });
+    </script>
+</body>
+</html>
