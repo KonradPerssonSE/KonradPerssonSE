@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Julskinkesimulering</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f8f1e7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    canvas {
+      background-color: #fceee3;
+      border: 2px solid #b87c5a;
+      border-radius: 10px;
+    }
+
+    .info {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      background: #fff0e6;
+      padding: 0.8rem 1.2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 4px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>Julskinka – Värmeledning i genomskärning</h1>
+  <canvas id="skinka" width="400" height="400"></canvas>
+  <div class="info" id="tempInfo">Temperatur i mitten: 5°C</div>
+
+  <script>
+    const canvas = document.getElementById("skinka");
+    const ctx = canvas.getContext("2d");
+    const info = document.getElementById("tempInfo");
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = 180;
+
+    const layers = 50;
+    let temperatures = Array(layers).fill(5);  // starttemp i grader
+    const T_ugn = 175;
+    const alpha = 0.00000015; // termisk diffusivitet (förenklad)
+    const dt = 5; // sekunder per uppdatering
+    const dr = radius / layers;
+
+    function updateTemperatures() {
+      const newTemps = [...temperatures];
+
+      for (let i = 1; i < layers - 1; i++) {
+        const d2T = (temperatures[i+1] - 2 * temperatures[i] + temperatures[i-1]) / (dr * dr);
+        const dT = (temperatures[i+1] - temperatures[i-1]) / (2 * dr);
+        const r = i * dr;
+        newTemps[i] += alpha * (d2T + (2 / r) * dT) * dt;
+      }
+
+      // Inre randvillkor
+      newTemps[0] = newTemps[1];
+
+      // Yttre randvillkor: värme från ugnen
+      const h = 25;
+      const k = 0.45;
+      newTemps[layers - 1] += (2 * alpha * dt / dr) * (
+        (temperatures[layers - 2] - temperatures[layers - 1]) / dr +
+        (h / k) * (T_ugn - temperatures[layers - 1])
+      );
+
+      temperatures = newTemps;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = layers - 1; i >= 0; i--) {
+        const r = i * dr;
+        const t = Math.min(temperatures[i], 100);
+        const red = 200 + t * 0.5;
+        const green = 80 - t * 0.3;
+        const blue = 80 - t * 0.3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgb(${red}, ${Math.max(green,0)}, ${Math.max(blue,0)})`;
+        ctx.fill();
+      }
+
+      const centerTemp = temperatures[0].toFixed(1);
+      info.textContent = `Temperatur i mitten: ${centerTemp}°C`;
+    }
+
+    function animate() {
+      updateTemperatures();
+      draw();
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
