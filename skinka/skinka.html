@@ -1,107 +1,190 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8">
-  <title>Julskinkesimulering</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f8f1e7;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-    }
-
-    canvas {
-      background-color: #fceee3;
-      border: 2px solid #b87c5a;
-      border-radius: 10px;
-    }
-
-    .info {
-      margin-top: 1rem;
-      font-size: 1.2rem;
-      background: #fff0e6;
-      padding: 0.8rem 1.2rem;
-      border-radius: 8px;
-      box-shadow: 0 0 4px rgba(0,0,0,0.1);
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Julskinka – Simulering v1.1</title>
+<style>
+  :root {
+    --bg: #f8f1e7;
+    --panel: #fff0e6;
+    --border: #b87c5a;
+    --font: sans-serif;
+  }
+  body {
+    margin: 0;
+    padding: 1.5rem;
+    font-family: var(--font);
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  h1 { margin: 0.2rem 0 1rem 0; }
+  .controls, .info, .log { background: var(--panel); border: 2px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .controls { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  label { font-size: 0.9rem; }
+  input[type="number"] { width: 4.5rem; padding: 0.2rem 0.3rem; }
+  button { padding: 0.4rem 0.9rem; font-size: 1rem; cursor: pointer; }
+  canvas { border: 2px solid var(--border); border-radius: 10px; background: #fceee3; }
+  .info { font-size: 1.1rem; }
+  .log { width: 400px; height: 160px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; }
+</style>
 </head>
 <body>
-  <h1>Julskinka – Värmeledning i genomskärning</h1>
-  <canvas id="skinka" width="400" height="400"></canvas>
-  <div class="info" id="tempInfo">Temperatur i mitten: 5°C</div>
 
-  <script>
-    const canvas = document.getElementById("skinka");
-    const ctx = canvas.getContext("2d");
-    const info = document.getElementById("tempInfo");
+<h1>Julskinka – Värmeledning (v 1.1)</h1>
 
-    const width = canvas.width;
-    const height = canvas.height;
-    const cx = width / 2;
-    const cy = height / 2;
-    const radius = 180;
+<!-- Kontroller -->
+<div class="controls">
+  <label>Vikt (kg): <input type="number" id="weight" value="2" min="0.5" step="0.1"></label>
+  <label>Ugn (°C): <input type="number" id="ovenTemp" value="175" min="50" max="300"></label>
+  <button id="startBtn">Starta ugnen</button>
+</div>
 
-    const layers = 50;
-    let temperatures = Array(layers).fill(5);  // starttemp i grader
-    const T_ugn = 175;
-    const alpha = 0.00000015; // termisk diffusivitet (förenklad)
-    const dt = 5; // sekunder per uppdatering
-    const dr = radius / layers;
+<!-- Skinka -->
+<canvas id="skinka" width="400" height="400"></canvas>
 
-    function updateTemperatures() {
-      const newTemps = [...temperatures];
+<!-- Aktuell info -->
+<div class="info" id="infoBox">Status: väntar på start</div>
 
-      for (let i = 1; i < layers - 1; i++) {
-        const d2T = (temperatures[i+1] - 2 * temperatures[i] + temperatures[i-1]) / (dr * dr);
-        const dT = (temperatures[i+1] - temperatures[i-1]) / (2 * dr);
-        const r = i * dr;
-        newTemps[i] += alpha * (d2T + (2 / r) * dT) * dt;
-      }
+<!-- Logg -->
+<div class="log" id="logBox"></div>
 
-      // Inre randvillkor
-      newTemps[0] = newTemps[1];
+<script>
+/* ---------- KONSTANTER ---------- */
+const rho  = 1050;   // kg/m³ densitet
+const cp   = 2800;   // J/kg·K
+const k    = 0.45;   // W/m·K
+const alpha= k / (rho * cp); // termisk diffusivitet
+const layers = 50;   // diskreta skikt
 
-      // Yttre randvillkor: värme från ugnen
-      const h = 25;
-      const k = 0.45;
-      newTemps[layers - 1] += (2 * alpha * dt / dr) * (
-        (temperatures[layers - 2] - temperatures[layers - 1]) / dr +
-        (h / k) * (T_ugn - temperatures[layers - 1])
-      );
+/* ---------- DOM‑OBJEKT ---------- */
+const canvas  = document.getElementById("skinka");
+const ctx     = canvas.getContext("2d");
+const infoBox = document.getElementById("infoBox");
+const logBox  = document.getElementById("logBox");
+const startBtn= document.getElementById("startBtn");
+const weightI = document.getElementById("weight");
+const ovenI   = document.getElementById("ovenTemp");
 
-      temperatures = newTemps;
-    }
+/* ---------- SIM‑DATA (initialt tom) ---------- */
+let T = [];                 // temperatur i varje lager
+let r_phys = [];            // radier (m) fysiskt
+let r_pix  = [];            // radier (px) för ritning
+let dr_phys, pixelScale;
+let ovenT, running = false;
+let simTime = 0, lastReal = 0, nextLog = 0;
 
-    function draw() {
-      ctx.clearRect(0, 0, width, height);
+/* ---------- HJÄLPFUNKTIONER ---------- */
+function log(line) {
+  logBox.textContent += line + "\n";
+  logBox.scrollTop = logBox.scrollHeight;
+}
 
-      for (let i = layers - 1; i >= 0; i--) {
-        const r = i * dr;
-        const t = Math.min(temperatures[i], 100);
-        const red = 200 + t * 0.5;
-        const green = 80 - t * 0.3;
-        const blue = 80 - t * 0.3;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgb(${red}, ${Math.max(green,0)}, ${Math.max(blue,0)})`;
-        ctx.fill();
-      }
+function initialise() {
+  /* 1. Läs in-data */
+  const mass = parseFloat(weightI.value);          // kg
+  ovenT = parseFloat(ovenI.value);                 // °C
+  if (mass <= 0 || isNaN(mass)) { alert("Ogiltig vikt"); return; }
 
-      const centerTemp = temperatures[0].toFixed(1);
-      info.textContent = `Temperatur i mitten: ${centerTemp}°C`;
-    }
+  /* 2. Beräkna radie (m) utifrån volymen m/rho (sfär‑approx.) */
+  const volume = mass / rho;                       // m³
+  const R_phys = Math.cbrt( (3*volume)/(4*Math.PI) ); // m
 
-    function animate() {
-      updateTemperatures();
-      draw();
-      requestAnimationFrame(animate);
-    }
+  /* 3. Skala till canvas‑pixlar – max radie 180 px */
+  pixelScale = 180 / R_phys;
+  r_pix  = Array.from({length: layers}, (_,i)=> (i*R_phys/layers)*pixelScale);
+  r_phys = Array.from({length: layers}, (_,i)=>  i*R_phys/layers);
+  dr_phys= R_phys / layers;
 
-    animate();
-  </script>
+  /* 4. Starttemperaturer */
+  T = Array(layers).fill(5);                       // 5 °C i hela skinkan
+
+  /* 5. Nollställ tidsräknare & logg */
+  simTime = 0; nextLog = 0; lastReal = performance.now();
+  logBox.textContent = "";
+  log(`Vikt: ${mass.toFixed(2)} kg  |  Radie ≈ ${(R_phys*100).toFixed(1)} cm`);
+  log(`Ugn:  ${ovenT} °C`);
+}
+
+function update(dtSim) {
+  /* Finita differenser i sfärisk 1D ‑ samma metod som tidigare men med variabel dt */
+  const newT = [...T];
+  for (let i=1;i<layers-1;i++) {
+    const r = r_phys[i];
+    const d2T = (T[i+1] - 2*T[i] + T[i-1]) / (dr_phys*dr_phys);
+    const dT  = (T[i+1] - T[i-1]) / (2*dr_phys);
+    newT[i] += alpha * (d2T + (2/r)*dT) * dtSim;
+  }
+  /* centrum (symmetri) */
+  newT[0] = newT[1];
+
+  /* yta (konvektion mot ugn) */
+  const h = 25;
+  newT[layers-1] += (2*alpha*dtSim/dr_phys)*(
+      (T[layers-2]-T[layers-1])/dr_phys + (h/k)*(ovenT - T[layers-1])
+  );
+  T = newT;
+}
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx = canvas.width/2, cy=cx;
+  for (let i=layers-1;i>=0;i--) {
+    const t = Math.min(T[i],100);                  // klippa färg
+    const red   = 200 + t*0.5;
+    const green = 80  - t*0.3;
+    const blue  = 80  - t*0.3;
+    ctx.beginPath();
+    ctx.arc(cx,cy,r_pix[i],0,Math.PI*2);
+    ctx.fillStyle = `rgb(${red}, ${Math.max(green,0)}, ${Math.max(blue,0)})`;
+    ctx.fill();
+  }
+}
+
+function animate(now) {
+  if (!running) return;
+  /* 1. Tidshantering */
+  const realDt = (now - lastReal)/1000;    // sekunder realtid
+  lastReal     = now;
+  const dtSim  = realDt * 60;              // 1 s real = 1 min (≈5 s→5 min)
+  simTime     += dtSim;
+
+  /* 2. Fysik */
+  update(dtSim);
+
+  /* 3. Logg var 5 sim‑min */
+  if (simTime >= nextLog) {
+    log(`t=${(simTime/60).toFixed(0)} min  |  Mitt=${T[0].toFixed(1)} °C`);
+    nextLog += 300; // 5 min i sek
+  }
+
+  /* 4. Ritning + info */
+  draw();
+  infoBox.textContent = `Mittens temp: ${T[0].toFixed(1)} °C  |  Ugn: ${ovenT} °C  |  Sim‑tid: ${(simTime/60).toFixed(1)} min`;
+
+  /* 5. Stoppa om skinkan är klar (70 °C) */
+  if (T[0] >= 70) {
+    running = false;
+    infoBox.textContent += "  –  KLAR 🎉";
+    log("Skinkan har nått 70 °C i mitten – färdig!");
+    startBtn.disabled = false;
+    return;
+  }
+  /* 6. Fortsätt */
+  requestAnimationFrame(animate);
+}
+
+/* ---------- EVENT ---------- */
+startBtn.addEventListener("click", () => {
+  initialise();
+  running = true;
+  startBtn.disabled = true;
+  infoBox.textContent = "Ugn påslagen – simulering startar …";
+  requestAnimationFrame(animate);
+});
+</script>
+
 </body>
 </html>
