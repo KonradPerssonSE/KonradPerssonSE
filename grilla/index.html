@@ -1,1 +1,127 @@
-hello world
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Grillguide: Rostbiff &amp; Vildsvinskotlettrad</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* Minimal reset & modern look */
+*,:before,:after{box-sizing:border-box;margin:0;padding:0}
+html{font-family:system-ui,sans-serif;font-size:clamp(1rem,1vw+0.5rem,1.2rem);background:linear-gradient(135deg,#fdfcfa,#f4f2ee)}
+body{max-width:60rem;margin:auto;padding:2rem;line-height:1.6;color:#222}
+
+/* Headings */
+h1{font-size:clamp(2rem,3vw+1rem,4rem);letter-spacing:-.03em;background:linear-gradient(90deg,#c0392b,#8e44ad);-webkit-background-clip:text;color:transparent;margin-bottom:1rem}
+
+/* Sections & cards */
+section{margin-block:2rem;padding:2rem;border-radius:1rem;background:rgba(255,255,255,.75);backdrop-filter:blur(6px)}
+.card{display:grid;gap:1rem;padding:1rem;border:1px solid #ddd;border-radius:.75rem;background:#fff;transition:transform .2s}
+.card:hover{transform:translateY(-5px)}
+.card h2{font-size:1.4rem}
+
+/* Lists & buttons */
+ul{list-style:square;padding-left:1.2rem}
+li+li{margin-top:.3rem}
+button.copy{margin-top:1rem;border:none;padding:.5rem 1rem;border-radius:.5rem;background:#c0392b;color:#fff;cursor:pointer;font-weight:600}
+button.copy:active{scale:.95}
+
+/* Grid layout */
+.recipe-grid{display:grid;gap:1.5rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+
+/* Temperature toggle */
+.temp{cursor:pointer;font-weight:bold}
+</style>
+</head>
+<body>
+<h1>Grillguide 2025</h1>
+
+<section class="card">
+<h2>Allround‑marinad</h2>
+<p><strong>Ger:</strong> ca 1,5&nbsp;dl &nbsp;|&nbsp; <strong>Marinering:</strong> minst 2 h</p>
+<ul id="marinade">
+  <li>0,5 dl raps‑ eller olivolja</li>
+  <li>2 msk soja</li>
+  <li>1 msk dijonsenap</li>
+  <li>1 msk honung</li>
+  <li>2 msk äppelcidervinäger eller citronjuice</li>
+  <li>2–3 pressade vitlöksklyftor</li>
+  <li>1 tsk torkad timjan/rosmarin</li>
+  <li>1 tsk svartpeppar</li>
+  <li>(valfritt) 3–4 stötta enbär</li>
+</ul>
+<button class="copy" data-target="marinade">Kopiera ingredienser</button>
+</section>
+
+<section class="card">
+<h2>Rökig honungsglaze</h2>
+<p>Pensla under de sista minutrarna över direkt värme.</p>
+<ul id="glaze">
+  <li>2 msk honung</li>
+  <li>1 msk ljus soja</li>
+  <li>1 msk äppelcidervinäger</li>
+  <li>1 tsk dijonsenap</li>
+  <li>0,5 tsk rökt paprikapulver</li>
+  <li>1 tsk neutral olja</li>
+  <li>(valfritt) cayenne för hetta</li>
+</ul>
+<button class="copy" data-target="glaze">Kopiera ingredienser</button>
+</section>
+
+<section>
+<div class="recipe-grid">
+<article class="card">
+<h2>Rostbiff</h2>
+<ul>
+  <li>Rumstemperera 30 min</li>
+  <li>Indirekt värme 15–30 min</li>
+  <li>Slutfinish 2–3 min/sida</li>
+  <li>Innertemp <span class="temp" data-c="58">58 °C</span> (medium)</li>
+  <li>Vila 5–10 min</li>
+</ul>
+</article>
+
+<article class="card">
+<h2>Vildsvinskotlettrad</h2>
+<ul>
+  <li>Rumstemperera 30 min</li>
+  <li>Indirekt värme 20–40 min</li>
+  <li>Slutfinish 2–3 min/sida</li>
+  <li>Innertemp <span class="temp" data-c="67">67 °C</span></li>
+  <li>Vila 10 min</li>
+</ul>
+</article>
+</div>
+</section>
+
+<footer style="text-align:center;font-size:.8rem;margin-top:4rem;">
+Made with <span style="font-variant:emoji">🔥</span> by ChatGPT • August&nbsp;8&nbsp;2025
+</footer>
+
+<script type="module">
+/* Copy to clipboard */
+document.querySelectorAll(\"button.copy\").forEach(btn=>{
+  btn.addEventListener(\"click\", async ()=>{
+    const tgt=document.getElementById(btn.dataset.target);
+    const text=[...tgt.children].map(li=>li.textContent).join(\"\\n\");
+    await navigator.clipboard.writeText(text);
+    btn.textContent=\"✔️ Kopierat!\";
+    setTimeout(()=>btn.textContent=\"Kopiera ingredienser\",2000);
+  });
+});
+
+/* Toggle °C/°F */
+function cToF(c){return Math.round(c*9/5+32);}
+document.querySelectorAll(\".temp\").forEach(t=>{
+  t.addEventListener(\"click\",()=>{
+    if(t.dataset.unit==='f'){
+      t.textContent=t.dataset.c+' °C';
+      t.dataset.unit='c';
+    }else{
+      t.textContent=cToF(parseInt(t.dataset.c,10))+' °F';
+      t.dataset.unit='f';
+    }
+  });
+});
+</script>
+</body>
+</html>
