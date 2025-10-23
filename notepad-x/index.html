@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notepad X</title>
+<style>
+:root {
+  color-scheme: light dark;
+}
+
+- {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  }
+
+body {
+font-family: ui-monospace, ‘Cascadia Code’, ‘Source Code Pro’, Menlo, Consolas, ‘DejaVu Sans Mono’, monospace;
+background: light-dark(#fff, #1e1e1e);
+color: light-dark(#000, #d4d4d4);
+overflow: hidden;
+height: 100vh;
+display: flex;
+flex-direction: column;
+}
+
+#tabs-container {
+display: flex;
+background: light-dark(#f5f5f5, #2d2d2d);
+border-bottom: 1px solid light-dark(#ddd, #3e3e3e);
+}
+
+#tabs {
+flex: 1;
+display: flex;
+overflow-x: auto;
+overflow-y: hidden;
+scrollbar-width: thin;
+scrollbar-color: light-dark(#ccc, #555) transparent;
+}
+
+#tabs::-webkit-scrollbar {
+height: 6px;
+}
+
+#tabs::-webkit-scrollbar-thumb {
+background: light-dark(#ccc, #555);
+border-radius: 3px;
+}
+
+.tab {
+padding: 12px 24px;
+cursor: pointer;
+white-space: nowrap;
+border-right: 1px solid light-dark(#ddd, #3e3e3e);
+user-select: none;
+transition: background 0.15s;
+}
+
+.tab:hover {
+background: light-dark(#eee, #333);
+}
+
+.tab.active {
+background: light-dark(#fff, #1e1e1e);
+font-weight: 600;
+}
+
+#tab-menu-btn {
+padding: 12px 20px;
+cursor: pointer;
+user-select: none;
+border-left: 1px solid light-dark(#ddd, #3e3e3e);
+transition: background 0.15s;
+font-size: 18px;
+}
+
+#tab-menu-btn:hover {
+background: light-dark(#eee, #333);
+}
+
+#editor-container {
+flex: 1;
+display: flex;
+position: relative;
+overflow: hidden;
+}
+
+#editor {
+flex: 1;
+padding: 16px;
+border: none;
+outline: none;
+resize: none;
+font-family: inherit;
+font-size: 14px;
+line-height: 1.5;
+background: transparent;
+color: inherit;
+overflow-y: auto;
+white-space: pre;
+overflow-wrap: normal;
+}
+
+#pill-nav {
+position: sticky;
+bottom: 0;
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 12px 16px;
+background: light-dark(#f5f5f5, #2d2d2d);
+border-top: 1px solid light-dark(#ddd, #3e3e3e);
+gap: 16px;
+z-index: 10;
+}
+
+.pill-button {
+background: light-dark(#e0e0e0, #3e3e3e);
+border: none;
+padding: 8px 16px;
+border-radius: 20px;
+cursor: pointer;
+font-family: inherit;
+font-size: 14px;
+color: inherit;
+transition: background 0.15s;
+}
+
+.pill-button:hover {
+background: light-dark(#d0d0d0, #4e4e4e);
+}
+
+#status {
+flex: 1;
+text-align: center;
+font-size: 13px;
+color: light-dark(#666, #999);
+}
+
+#modal-overlay {
+display: none;
+position: fixed;
+inset: 0;
+background: rgba(0, 0, 0, 0.5);
+z-index: 100;
+align-items: center;
+justify-content: center;
+}
+
+#modal {
+background: light-dark(#fff, #2d2d2d);
+padding: 24px;
+border-radius: 8px;
+min-width: 400px;
+max-width: 600px;
+max-height: 80vh;
+overflow-y: auto;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#modal input[type=“text”] {
+width: 100%;
+padding: 12px;
+font-family: inherit;
+font-size: 16px;
+font-weight: 600;
+background: light-dark(#f5f5f5, #1e1e1e);
+color: inherit;
+border: 1px solid light-dark(#ddd, #3e3e3e);
+border-radius: 4px;
+margin-bottom: 16px;
+}
+
+#modal textarea {
+width: 100%;
+min-height: 150px;
+padding: 12px;
+font-family: inherit;
+font-size: 13px;
+background: light-dark(#f5f5f5, #1e1e1e);
+color: inherit;
+border: 1px solid light-dark(#ddd, #3e3e3e);
+border-radius: 4px;
+margin-bottom: 12px;
+resize: vertical;
+}
+
+.modal-buttons {
+display: flex;
+gap: 8px;
+justify-content: flex-end;
+margin-top: 16px;
+}
+
+.modal-buttons button {
+padding: 8px 16px;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-family: inherit;
+font-size: 14px;
+transition: background 0.15s;
+}
+
+.modal-buttons button:first-child {
+background: light-dark(#e0e0e0, #3e3e3e);
+color: inherit;
+}
+
+.modal-buttons button:first-child:hover {
+background: light-dark(#d0d0d0, #4e4e4e);
+}
+
+.modal-buttons button:last-child {
+background: light-dark(#007acc, #0e639c);
+color: #fff;
+}
+
+.modal-buttons button:last-child:hover {
+background: light-dark(#006bb3, #0d5a8a);
+}
+
+#tab-list {
+display: flex;
+flex-direction: column;
+gap: 8px;
+max-height: 400px;
+overflow-y: auto;
+}
+
+.tab-list-item {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 12px 16px;
+background: light-dark(#f5f5f5, #1e1e1e);
+border-radius: 4px;
+cursor: pointer;
+transition: background 0.15s;
+gap: 16px;
+}
+
+.tab-list-item:hover {
+background: light-dark(#eee, #2a2a2a);
+}
+
+.tab-list-item.active {
+background: light-dark(#007acc, #0e639c);
+color: #fff;
+}
+
+.tab-list-item-name {
+flex: 1;
+}
+
+.tab-delete-btn {
+background: none;
+border: none;
+font-size: 18px;
+cursor: pointer;
+color: inherit;
+opacity: 0.6;
+transition: opacity 0.15s;
+padding: 4px 8px;
+}
+
+.tab-delete-btn:hover {
+opacity: 1;
+}
+</style>
+
+</head>
+<body>
+<div id="tabs-container">
+  <div id="tabs"></div>
+  <div id="tab-menu-btn">☰</div>
+</div>
+<div id="editor-container">
+  <textarea id="editor" spellcheck="false"></textarea>
+</div>
+<div id="pill-nav">
+  <button class="pill-button" id="options-btn">⋮</button>
+  <div id="status">synced</div>
+  <button class="pill-button" id="new-note-btn">+</button>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <div id="options-panel" style="display: none;">
+      <input type="text" id="note-title" placeholder="Note title">
+      <textarea id="custom-css" placeholder="Custom CSS..."></textarea>
+      <textarea id="custom-js" placeholder="Custom JavaScript..."></textarea>
+      <div class="modal-buttons">
+        <button id="close-modal">Close</button>
+        <button id="save-modal">Save</button>
+      </div>
+    </div>
+    <div id="tab-menu-panel" style="display: none;">
+      <div id="tab-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+class NotepadX {
+  constructor() {
+    this.workspaces = JSON.parse(localStorage.getItem('notepad-x-workspaces')) || [];
+    this.activeId = localStorage.getItem('notepad-x-active') || null;
+    this.saveTimeout = null;
+    this.customStyleEl = null;
+    this.customScriptEl = null;
+    
+    if (this.workspaces.length === 0) {
+      this.createNote();
+    }
+    
+    this.init();
+  }
+  
+  init() {
+    this.renderTabs();
+    this.loadActiveNote();
+    this.bindEvents();
+  }
+  
+  createNote() {
+    const id = `note-${Date.now()}`;
+    const noteNumber = this.workspaces.length + 1;
+    const workspace = {
+      noteId: id,
+      title: `Note ${noteNumber}`,
+      textAreaContent: '',
+      dateCreated: new Date().toISOString(),
+      dateLastModified: new Date().toISOString(),
+      customCSS: '',
+      customJS: ''
+    };
+    
+    this.workspaces.push(workspace);
+    this.activeId = id;
+    this.save();
+    return workspace;
+  }
+  
+  deleteNote(noteId) {
+    if (this.workspaces.length === 1) {
+      alert('Cannot delete the last note');
+      return;
+    }
+    
+    const index = this.workspaces.findIndex(w => w.noteId === noteId);
+    if (index === -1) return;
+    
+    this.workspaces.splice(index, 1);
+    
+    if (this.activeId === noteId) {
+      this.activeId = this.workspaces[Math.max(0, index - 1)].noteId;
+    }
+    
+    this.save();
+    this.renderTabs();
+    this.loadActiveNote();
+  }
+  
+  save() {
+    localStorage.setItem('notepad-x-workspaces', JSON.stringify(this.workspaces));
+    localStorage.setItem('notepad-x-active', this.activeId);
+  }
+  
+  getActiveWorkspace() {
+    return this.workspaces.find(w => w.noteId === this.activeId);
+  }
+  
+  renderTabs() {
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = '';
+    
+    this.workspaces.forEach((workspace) => {
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (workspace.noteId === this.activeId ? ' active' : '');
+      tab.textContent = workspace.title;
+      tab.dataset.id = workspace.noteId;
+      tab.addEventListener('click', () => this.switchNote(workspace.noteId));
+      tabsEl.appendChild(tab);
+    });
+  }
+  
+  renderTabList() {
+    const tabList = document.getElementById('tab-list');
+    tabList.innerHTML = '';
+    
+    this.workspaces.forEach((workspace) => {
+      const item = document.createElement('div');
+      item.className = 'tab-list-item' + (workspace.noteId === this.activeId ? ' active' : '');
+      
+      const name = document.createElement('div');
+      name.className = 'tab-list-item-name';
+      name.textContent = workspace.title;
+      name.addEventListener('click', () => {
+        this.switchNote(workspace.noteId);
+        this.closeModal();
+      });
+      
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'tab-delete-btn';
+      deleteBtn.textContent = '🗙';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.deleteNote(workspace.noteId);
+        this.renderTabList();
+      });
+      
+      item.appendChild(name);
+      item.appendChild(deleteBtn);
+      tabList.appendChild(item);
+    });
+  }
+  
+  switchNote(noteId) {
+    this.activeId = noteId;
+    this.save();
+    this.loadActiveNote();
+    this.renderTabs();
+  }
+  
+  loadActiveNote() {
+    const workspace = this.getActiveWorkspace();
+    const editor = document.getElementById('editor');
+    editor.value = workspace.textAreaContent;
+    this.applyCustomStyles();
+  }
+  
+  applyCustomStyles() {
+    const workspace = this.getActiveWorkspace();
+    
+    if (this.customStyleEl) this.customStyleEl.remove();
+    if (this.customScriptEl) this.customScriptEl.remove();
+    
+    if (workspace.customCSS) {
+      this.customStyleEl = document.createElement('style');
+      this.customStyleEl.textContent = workspace.customCSS;
+      document.head.appendChild(this.customStyleEl);
+    }
+    
+    if (workspace.customJS) {
+      try {
+        this.customScriptEl = document.createElement('script');
+        this.customScriptEl.textContent = workspace.customJS;
+        document.body.appendChild(this.customScriptEl);
+      } catch (e) {
+        console.error('Error executing custom JS:', e);
+      }
+    }
+  }
+  
+  autoSave() {
+    clearTimeout(this.saveTimeout);
+    
+    const status = document.getElementById('status');
+    status.textContent = 'saving...';
+    
+    this.saveTimeout = setTimeout(() => {
+      const workspace = this.getActiveWorkspace();
+      workspace.textAreaContent = document.getElementById('editor').value;
+      workspace.dateLastModified = new Date().toISOString();
+      this.save();
+      status.textContent = 'synced';
+    }, 500);
+  }
+  
+  closeModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+    document.getElementById('options-panel').style.display = 'none';
+    document.getElementById('tab-menu-panel').style.display = 'none';
+  }
+  
+  bindEvents() {
+    const editor = document.getElementById('editor');
+    const newNoteBtn = document.getElementById('new-note-btn');
+    const optionsBtn = document.getElementById('options-btn');
+    const tabMenuBtn = document.getElementById('tab-menu-btn');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const closeModal = document.getElementById('close-modal');
+    const saveModal = document.getElementById('save-modal');
+    
+    editor.addEventListener('input', () => {
+      this.autoSave();
+    });
+    
+    newNoteBtn.addEventListener('click', () => {
+      this.createNote();
+      this.renderTabs();
+      this.loadActiveNote();
+    });
+    
+    optionsBtn.addEventListener('click', () => {
+      const workspace = this.getActiveWorkspace();
+      document.getElementById('note-title').value = workspace.title;
+      document.getElementById('custom-css').value = workspace.customCSS;
+      document.getElementById('custom-js').value = workspace.customJS;
+      document.getElementById('options-panel').style.display = 'block';
+      document.getElementById('tab-menu-panel').style.display = 'none';
+      modalOverlay.style.display = 'flex';
+    });
+    
+    tabMenuBtn.addEventListener('click', () => {
+      this.renderTabList();
+      document.getElementById('tab-menu-panel').style.display = 'block';
+      document.getElementById('options-panel').style.display = 'none';
+      modalOverlay.style.display = 'flex';
+    });
+    
+    closeModal.addEventListener('click', () => {
+      this.closeModal();
+    });
+    
+    saveModal.addEventListener('click', () => {
+      const workspace = this.getActiveWorkspace();
+      workspace.title = document.getElementById('note-title').value || 'Untitled';
+      workspace.customCSS = document.getElementById('custom-css').value;
+      workspace.customJS = document.getElementById('custom-js').value;
+      this.save();
+      this.applyCustomStyles();
+      this.renderTabs();
+      this.closeModal();
+    });
+    
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        this.closeModal();
+      }
+    });
+  }
+}
+
+new NotepadX();
+</script>
+
+</body>
+</html>
