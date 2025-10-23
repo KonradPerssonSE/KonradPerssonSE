@@ -30,6 +30,7 @@ background: light-dark(#fff, #1e1e1e);
 color: light-dark(#000, #d4d4d4);
 display: flex;
 flex-direction: column;
+  margin: 0;
 }
 
 #tabs-container {
@@ -513,7 +514,7 @@ class NotepadX {
     clearTimeout(this.saveTimeout);
     
     const status = document.getElementById('status');
-    status.textContent = 'saving...';
+    status.textContent = 'saving';
     
     this.saveTimeout = setTimeout(() => {
       const workspace = this.getActiveWorkspace();
