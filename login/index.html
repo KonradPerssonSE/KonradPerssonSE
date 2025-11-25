@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #000;
+  color: #0f0;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  line-height: 1.2;
+  overflow: hidden;
+  cursor: none;
+}
+
+#canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#art {
+  white-space: pre;
+  text-align: left;
+  position: relative;
+}
+
+.char {
+  display: inline-block;
+  opacity: 0;
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.input-char {
+  animation: none;
+  opacity: 1;
+}
+
+.login-btn {
+  color: #0ff;
+  cursor: pointer;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.cursor-follower {
+  position: fixed;
+  width: 8px;
+  height: 16px;
+  background: #0f0;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 1000;
+}
+</style>
+</head>
+<body>
+<div class="cursor-follower"></div>
+<div id="canvas">
+  <div id="art"></div>
+</div>
+
+<script>
+const WIDTH = 80;
+const HEIGHT = 40;
+const CHARS = '·∴※☆★✦✧∘○◦∙•⋅';
+const BOX_CHARS = {
+  tl: '╔', tr: '╗', bl: '╚', br: '╝',
+  h: '═', v: '║'
+};
+
+let grid = [];
+let username = '';
+let password = '';
+let activeField = 'username';
+let loginBtnPos = null;
+
+function initGrid() {
+  for (let y = 0; y < HEIGHT; y++) {
+    grid[y] = [];
+    for (let x = 0; x < WIDTH; x++) {
+      if (Math.random() > 0.85) {
+        grid[y][x] = CHARS[Math.floor(Math.random() * CHARS.length)];
+      } else {
+        grid[y][x] = ' ';
+      }
+    }
+  }
+}
+
+function drawLoginBox() {
+  const centerX = Math.floor(WIDTH / 2) - 7;
+  const centerY = Math.floor(HEIGHT / 2) - 5;
+  
+  // Username box
+  const uy = centerY;
+  grid[uy][centerX] = BOX_CHARS.tl;
+  grid[uy][centerX + 13] = BOX_CHARS.tr;
+  grid[uy + 2][centerX] = BOX_CHARS.bl;
+  grid[uy + 2][centerX + 13] = BOX_CHARS.br;
+  
+  for (let i = 1; i < 13; i++) {
+    grid[uy][centerX + i] = BOX_CHARS.h;
+    grid[uy + 2][centerX + i] = BOX_CHARS.h;
+  }
+  grid[uy + 1][centerX] = BOX_CHARS.v;
+  grid[uy + 1][centerX + 13] = BOX_CHARS.v;
+  
+  // Username label
+  const uLabel = 'USERNAME';
+  for (let i = 0; i < uLabel.length; i++) {
+    grid[uy - 1][centerX + 3 + i] = uLabel[i];
+  }
+  
+  // Password box
+  const py = centerY + 4;
+  grid[py][centerX] = BOX_CHARS.tl;
+  grid[py][centerX + 13] = BOX_CHARS.tr;
+  grid[py + 2][centerX] = BOX_CHARS.bl;
+  grid[py + 2][centerX + 13] = BOX_CHARS.br;
+  
+  for (let i = 1; i < 13; i++) {
+    grid[py][centerX + i] = BOX_CHARS.h;
+    grid[py + 2][centerX + i] = BOX_CHARS.h;
+  }
+  grid[py + 1][centerX] = BOX_CHARS.v;
+  grid[py + 1][centerX + 13] = BOX_CHARS.v;
+  
+  // Password label
+  const pLabel = 'PASSWORD';
+  for (let i = 0; i < pLabel.length; i++) {
+    grid[py - 1][centerX + 3 + i] = pLabel[i];
+  }
+  
+  // Fill in username
+  for (let i = 0; i < 12; i++) {
+    grid[uy + 1][centerX + 1 + i] = i < username.length ? username[i] : ' ';
+  }
+  
+  // Fill in password (masked)
+  for (let i = 0; i < 12; i++) {
+    grid[py + 1][centerX + 1 + i] = i < password.length ? '●' : ' ';
+  }
+  
+  // Active field indicator
+  if (activeField === 'username') {
+    grid[uy + 1][centerX + 1 + username.length] = '▂';
+  } else {
+    grid[py + 1][centerX + 1 + password.length] = '▂';
+  }
+}
+
+function showLoginButton() {
+  if (username.length >= 8 && password.length >= 8 && !loginBtnPos) {
+    // Find random empty spot
+    let attempts = 0;
+    while (attempts < 100) {
+      const x = Math.floor(Math.random() * (WIDTH - 10)) + 5;
+      const y = Math.floor(Math.random() * (HEIGHT - 5)) + 2;
+      
+      // Check if area is relatively clear
+      let clear = true;
+      const text = '[ LOGIN ]';
+      for (let i = 0; i < text.length; i++) {
+        if (grid[y] && grid[y][x + i] && 
+            (grid[y][x + i].match(/[╔╗╚╝═║]/) || 
+             grid[y][x + i].match(/[A-Z]/))) {
+          clear = false;
+          break;
+        }
+      }
+      
+      if (clear) {
+        loginBtnPos = { x, y };
+        break;
+      }
+      attempts++;
+    }
+  } else if ((username.length < 8 || password.length < 8) && loginBtnPos) {
+    loginBtnPos = null;
+  }
+  
+  if (loginBtnPos) {
+    const text = '[ LOGIN ]';
+    for (let i = 0; i < text.length; i++) {
+      grid[loginBtnPos.y][loginBtnPos.x + i] = text[i];
+    }
+  }
+}
+
+function render() {
+  const art = document.getElementById('art');
+  let html = '';
+  
+  for (let y = 0; y < HEIGHT; y++) {
+    for (let x = 0; x < WIDTH; x++) {
+      const char = grid[y][x] || ' ';
+      const delay = Math.random() * 4;
+      
+      const isLoginBtn = loginBtnPos && 
+        y === loginBtnPos.y && 
+        x >= loginBtnPos.x && 
+        x < loginBtnPos.x + 9;
+      
+      const isInput = char === '▂' || 
+        (char.match(/[a-zA-Z0-9●]/) && !char.match(/[USERNAMPWO]/));
+      
+      if (isLoginBtn) {
+        html += `<span class="char login-btn" style="animation-delay: ${delay}s">${char}</span>`;
+      } else if (isInput) {
+        html += `<span class="input-char">${char}</span>`;
+      } else {
+        html += `<span class="char" style="animation-delay: ${delay}s">${char}</span>`;
+      }
+    }
+    html += '\n';
+  }
+  
+  art.innerHTML = html;
+}
+
+function handleInput(key) {
+  if (key === 'Tab') {
+    activeField = activeField === 'username' ? 'password' : 'username';
+    return;
+  }
+  
+  if (key === 'Enter' && loginBtnPos) {
+    console.log('Login attempt:', { username, password });
+    alert(`Login!\nUsername: ${username}\nPassword: ${'●'.repeat(password.length)}`);
+    return;
+  }
+  
+  if (key === 'Backspace') {
+    if (activeField === 'username' && username.length > 0) {
+      username = username.slice(0, -1);
+    } else if (activeField === 'password' && password.length > 0) {
+      password = password.slice(0, -1);
+    }
+  } else if (key.length === 1 && key.match(/[a-zA-Z0-9]/)) {
+    if (activeField === 'username' && username.length < 12) {
+      username += key;
+    } else if (activeField === 'password' && password.length < 12) {
+      password += key;
+    }
+  }
+  
+  initGrid();
+  drawLoginBox();
+  showLoginButton();
+  render();
+}
+
+// Custom cursor
+const cursor = document.querySelector('.cursor-follower');
+document.addEventListener('mousemove', (e) => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+});
+
+// Keyboard input
+document.addEventListener('keydown', (e) => {
+  e.preventDefault();
+  handleInput(e.key);
+});
+
+// Click on login button
+document.addEventListener('click', (e) => {
+  if (!loginBtnPos) return;
+  
+  const art = document.getElementById('art');
+  const rect = art.getBoundingClientRect();
+  const charWidth = rect.width / WIDTH;
+  const charHeight = rect.height / HEIGHT;
+  
+  const clickX = Math.floor((e.clientX - rect.left) / charWidth);
+  const clickY = Math.floor((e.clientY - rect.top) / charHeight);
+  
+  if (clickY === loginBtnPos.y && 
+      clickX >= loginBtnPos.x && 
+      clickX < loginBtnPos.x + 9) {
+    handleInput('Enter');
+  }
+});
+
+// Initialize
+initGrid();
+drawLoginBox();
+render();
+
+// Gentle background animation
+setInterval(() => {
+  for (let i = 0; i < 5; i++) {
+    const x = Math.floor(Math.random() * WIDTH);
+    const y = Math.floor(Math.random() * HEIGHT);
+    if (grid[y][x] === ' ' || CHARS.includes(grid[y][x])) {
+      grid[y][x] = Math.random() > 0.5 ? CHARS[Math.floor(Math.random() * CHARS.length)] : ' ';
+    }
+  }
+  drawLoginBox();
+  showLoginButton();
+  render();
+}, 2000);
+</script>
+</body>
+</html>
