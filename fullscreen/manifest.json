@@ -1,0 +1,16 @@
+{
+  "name": "Fullscreen Viewer",
+  "short_name": "FullView",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/10156/10156372.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
