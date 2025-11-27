@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fullscreen Viewer</title>
+    <!-- Critical: Link the PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- React & Tailwind Setup -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Lucide Icons Component Wrapper -->
+    <script>
+        // Simple wrapper to use Lucide icons in React without a bundler
+        const Icon = ({ name, size = 24, color = "currentColor", ...props }) => {
+            React.useEffect(() => {
+                lucide.createIcons();
+            }, [name]);
+            return React.createElement('i', {
+                'data-lucide': name,
+                width: size,
+                height: size,
+                style: { color: color },
+                ...props
+            });
+        };
+    </script>
+
+    <style>
+        /* Custom scrollbar for the dashboard */
+        body { background-color: #09090b; color: white; overflow: hidden; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Ensure iframe is truly fullscreen */
+        .fullscreen-frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            z-index: 50;
+            background: white;
+        }
+        .fab-exit {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 60;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+        .fab-exit:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [url, setUrl] = useState('');
+            const [activeFrame, setActiveFrame] = useState(null);
+            const [error, setError] = useState(null);
+            const [installPrompt, setInstallPrompt] = useState(null);
+
+            useEffect(() => {
+                // Listen for PWA install event
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    setInstallPrompt(e);
+                });
+                lucide.createIcons();
+            }, []);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setError(null);
+
+                if (!url.trim()) return;
+
+                let formattedUrl = url.trim();
+                // Auto-prepend https if missing
+                if (!/^https?:\/\//i.test(formattedUrl)) {
+                    formattedUrl = 'https://' + formattedUrl;
+                }
+
+                setActiveFrame(formattedUrl);
+            };
+
+            const handleInstall = async () => {
+                if (!installPrompt) return;
+                installPrompt.prompt();
+                setInstallPrompt(null);
+            };
+
+            const clearFrame = () => {
+                setActiveFrame(null);
+                setError(null);
+            };
+
+            // If we are in "Fullscreen Mode" (iframe is active)
+            if (activeFrame) {
+                return (
+                    <div className="w-full h-full bg-black">
+                        <iframe 
+                            src={activeFrame} 
+                            className="fullscreen-frame"
+                            title="Fullscreen Content"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            onError={() => setError("Could not load this website. It might be blocked.")}
+                        />
+                        
+                        {/* Floating Exit Button */}
+                        <button 
+                            onClick={clearFrame}
+                            className="fab-exit bg-red-600 hover:bg-red-500 text-white p-3 rounded-full shadow-lg"
+                            title="Exit Fullscreen"
+                        >
+                            <Icon name="x" size={24} />
+                        </button>
+                    </div>
+                );
+            }
+
+            // Dashboard Mode
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                    {/* Background decoration */}
+                    <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+                    <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-600 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+
+                    <div className="max-w-md w-full glass-panel p-8 rounded-2xl shadow-2xl z-10">
+                        <div className="flex flex-col items-center mb-8">
+                            <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4 shadow-lg shadow-blue-500/20">
+                                <Icon name="maximize" size={48} color="white" />
+                            </div>
+                            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                                Fullscreen
+                            </h1>
+                            <p className="text-gray-400 mt-2 text-center">
+                                Load any URL into an immersive, edge-to-edge container.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 group-focus-within:text-blue-400 transition-colors">
+                                    <Icon name="link" size={18} />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    placeholder="example.com"
+                                    className="w-full bg-black/40 border border-gray-700 text-white rounded-xl py-4 pl-10 pr-4 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-600"
+                                />
+                            </div>
+
+                            <button 
+                                type="submit"
+                                className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <span>Make Fullscreen</span>
+                                <Icon name="arrow-right" size={20} />
+                            </button>
+                        </form>
+
+                        {/* Install PWA Button - Only shows if installable */}
+                        {installPrompt && (
+                            <button 
+                                onClick={handleInstall}
+                                className="w-full mt-4 bg-gray-800 text-gray-300 font-medium py-3 rounded-xl hover:bg-gray-700 transition-colors border border-gray-700 flex items-center justify-center gap-2"
+                            >
+                                <Icon name="download" size={18} />
+                                <span>Install App to Home Screen</span>
+                            </button>
+                        )}
+
+                        <div className="mt-6 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                            <div className="flex gap-2 text-yellow-500/80 text-xs">
+                                <Icon name="alert-triangle" size={16} />
+                                <p>
+                                    Some websites (e.g., Google, YouTube) cannot be loaded here due to their security settings.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="absolute bottom-6 text-gray-600 text-sm">
+                        Designed for Pixel 10 XL
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
