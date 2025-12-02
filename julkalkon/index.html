@@ -432,4 +432,265 @@
                         { text: "Gul lök (6st)", checked: false },
                         { text: "Rödlök (2st)", checked: false },
                         { text: "Morötter (1.5kg)", checked: false },
-                        { text: "Palsterna
+                        { text: "Palsternacka/Sellerirot (1kg)", checked: false },
+                        { text: "Blekselleri (1 knippe)", checked: false },
+                        { text: "Äpplen (4st)", checked: false },
+                        { text: "Citroner (2st)", checked: false },
+                        { text: "Vitlök", checked: false },
+                        { text: "Färska Örter (Salvia!, Timjan, Rosmarin)", checked: false }
+                    ]
+                },
+                {
+                    category: "Skafferiet",
+                    items: [
+                        { text: "Katrinplommon (800g - VIKTIGT)", checked: false },
+                        { text: "Ljust Bröd (1kg, Levain/Franska)", checked: false },
+                        { text: "Kikärter (3 burkar)", checked: false },
+                        { text: "Kycklingfond (Konc.)", checked: false },
+                        { text: "Vetemjöl", checked: false },
+                        { text: "Gelé (Svartvinbär/Äpple)", checked: false },
+                        { text: "Soja", checked: false },
+                        { text: "Kanelstång", checked: false },
+                        { text: "Nötter (Mandel/Hassel, valfritt)", checked: false }
+                    ]
+                }
+            ]
+        };
+
+        const app = {
+            data: null,
+            isEditMode: false,
+
+            init() {
+                const stored = localStorage.getItem('julkalkon_v1');
+                if (stored) {
+                    this.data = JSON.parse(stored);
+                } else {
+                    this.data = JSON.parse(JSON.stringify(appData));
+                    this.save();
+                }
+                this.renderAll();
+            },
+
+            save() {
+                localStorage.setItem('julkalkon_v1', JSON.stringify(this.data));
+            },
+
+            resetData() {
+                if(confirm("Vill du återställa till originalplanen? Alla dina ändringar försvinner.")) {
+                    this.data = JSON.parse(JSON.stringify(appData));
+                    this.save();
+                    this.renderAll();
+                }
+            },
+
+            toggleEditMode() {
+                this.isEditMode = !this.isEditMode;
+                const btn = document.getElementById('btn-edit');
+                if (this.isEditMode) {
+                    btn.innerText = "[SPARA]";
+                    btn.classList.add('bg-ink', 'text-paper');
+                } else {
+                    btn.innerText = "[REDIGERA]";
+                    btn.classList.remove('bg-ink', 'text-paper');
+                }
+                this.renderAll();
+            },
+
+            switchTab(tabName) {
+                // Hide all sections
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('block')); // Ensure block is removed
+                
+                // Show active section
+                document.getElementById(`section-${tabName}`).classList.remove('hidden');
+                document.getElementById(`section-${tabName}`).classList.add('block');
+
+                // Update buttons
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+            },
+
+            // --- RENDERERS ---
+
+            renderAll() {
+                this.renderSchedule();
+                this.renderRecipes();
+                this.renderShopping();
+            },
+
+            renderSchedule() {
+                const container = document.getElementById('schedule-container');
+                container.innerHTML = '';
+                
+                this.data.schedule.forEach((day, dayIndex) => {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'schedule-day';
+                    dayEl.innerHTML = `
+                        <h2 class="text-xl font-bold uppercase border-b-2 border-ink pb-2 mb-6">${day.day}</h2>
+                        <div class="space-y-6" id="day-${dayIndex}"></div>
+                    `;
+                    
+                    const slotContainer = dayEl.querySelector(`#day-${dayIndex}`);
+                    
+                    day.timeSlots.forEach((slot, slotIndex) => {
+                        const slotEl = document.createElement('div');
+                        slotEl.className = 'flex gap-4 md:gap-8 items-start';
+                        
+                        let itemsHtml = '';
+                        slot.items.forEach((item, itemIndex) => {
+                            itemsHtml += `
+                                <div class="flex items-start mb-2 group">
+                                    <label class="flex items-start cursor-pointer select-none w-full">
+                                        <input type="checkbox" class="check-box" 
+                                            ${item.checked ? 'checked' : ''} 
+                                            onchange="app.toggleCheck('schedule', ${dayIndex}, ${slotIndex}, ${itemIndex}, null)">
+                                        <div class="${item.checked ? 'line-through opacity-40' : ''} flex-1 outline-none transition-opacity"
+                                             contenteditable="${this.isEditMode}"
+                                             onblur="app.updateText('schedule', ${dayIndex}, ${slotIndex}, ${itemIndex}, null, this.innerText)">
+                                             ${item.text}
+                                        </div>
+                                    </label>
+                                    ${this.isEditMode ? `<button onclick="app.deleteItem('schedule', ${dayIndex}, ${slotIndex}, ${itemIndex})" class="ml-2 text-red-500 opacity-50 hover:opacity-100">×</button>` : ''}
+                                </div>
+                            `;
+                        });
+
+                        slotEl.innerHTML = `
+                            <div class="w-24 shrink-0 pt-0.5 font-bold text-sm opacity-60">${slot.time}</div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg mb-2 uppercase tracking-wide">${slot.title}</h3>
+                                <div class="text-base font-light">${itemsHtml}</div>
+                                ${this.isEditMode ? `<button onclick="app.addItem('schedule', ${dayIndex}, ${slotIndex})" class="text-xs mt-2 opacity-50 hover:underline">+ Lägg till steg</button>` : ''}
+                            </div>
+                        `;
+                        slotContainer.appendChild(slotEl);
+                    });
+
+                    container.appendChild(dayEl);
+                });
+            },
+
+            renderRecipes() {
+                const container = document.getElementById('recipes-container');
+                container.innerHTML = '';
+
+                this.data.recipes.forEach((recipe, rIndex) => {
+                    const el = document.createElement('div');
+                    el.className = 'recipe-card';
+                    el.innerHTML = `
+                        <div class="mb-6 border-l-4 border-ink pl-4">
+                            <h2 class="text-2xl font-bold uppercase leading-none mb-1">${recipe.title}</h2>
+                            <p class="text-sm opacity-60 uppercase tracking-widest">${recipe.meta}</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <h4 class="font-bold uppercase border-b border-gray-300 mb-3 pb-1 text-sm">Ingredienser</h4>
+                                <ul class="space-y-2 text-sm">
+                                    ${recipe.ingredients.map((ing, i) => `
+                                        <li class="flex items-start">
+                                            <input type="checkbox" class="check-box" ${ing.checked ? 'checked' : ''}
+                                                onchange="app.toggleCheck('recipe-ing', ${rIndex}, ${i}, null, null)">
+                                            <span contenteditable="${this.isEditMode}" class="flex-1 outline-none ${ing.checked ? 'line-through opacity-40' : ''}"
+                                                onblur="app.updateText('recipe-ing', ${rIndex}, ${i}, null, null, this.innerText)">${ing.text}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-bold uppercase border-b border-gray-300 mb-3 pb-1 text-sm">Gör så här</h4>
+                                <ol class="space-y-3">
+                                    ${recipe.steps.map((step, i) => `
+                                        <li class="flex items-start">
+                                            <span class="mr-3 font-bold opacity-30 text-xs mt-1">${i+1}.</span>
+                                            <span contenteditable="${this.isEditMode}" class="flex-1 outline-none"
+                                                onblur="app.updateText('recipe-step', ${rIndex}, ${i}, null, null, this.innerText)">${step.text}</span>
+                                        </li>
+                                    `).join('')}
+                                </ol>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(el);
+                });
+            },
+
+            renderShopping() {
+                const container = document.getElementById('shopping-container');
+                container.innerHTML = '';
+
+                this.data.shopping.forEach((cat, cIndex) => {
+                    const el = document.createElement('div');
+                    el.className = 'break-inside-avoid mb-6';
+                    el.innerHTML = `
+                        <h3 class="text-lg font-bold uppercase border-b-2 border-black mb-4 pb-1">${cat.category}</h3>
+                        <ul class="space-y-2">
+                             ${cat.items.map((item, i) => `
+                                <li class="flex items-start group">
+                                    <input type="checkbox" class="check-box" ${item.checked ? 'checked' : ''}
+                                        onchange="app.toggleCheck('shop', ${cIndex}, ${i}, null, null)">
+                                    <span contenteditable="${this.isEditMode}" class="flex-1 outline-none ${item.checked ? 'line-through opacity-30' : ''}"
+                                        onblur="app.updateText('shop', ${cIndex}, ${i}, null, null, this.innerText)">${item.text}</span>
+                                    ${this.isEditMode ? `<button onclick="app.deleteItem('shop', ${cIndex}, ${i})" class="text-red-500 opacity-20 hover:opacity-100 px-2">×</button>` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                         ${this.isEditMode ? `<button onclick="app.addItem('shop', ${cIndex})" class="text-xs mt-3 opacity-50 hover:underline">+ Lägg till vara</button>` : ''}
+                    `;
+                    container.appendChild(el);
+                });
+            },
+
+            // --- DATA MANIPULATION HANDLERS ---
+
+            toggleCheck(type, idx1, idx2, idx3) {
+                if (type === 'schedule') {
+                    this.data.schedule[idx1].timeSlots[idx2].items[idx3].checked = !this.data.schedule[idx1].timeSlots[idx2].items[idx3].checked;
+                } else if (type === 'recipe-ing') {
+                    this.data.recipes[idx1].ingredients[idx2].checked = !this.data.recipes[idx1].ingredients[idx2].checked;
+                } else if (type === 'shop') {
+                    this.data.shopping[idx1].items[idx2].checked = !this.data.shopping[idx1].items[idx2].checked;
+                }
+                this.save();
+                this.renderAll(); // Re-render to update line-through styles
+            },
+
+            updateText(type, idx1, idx2, idx3, idx4, newText) {
+                if (type === 'schedule') {
+                    this.data.schedule[idx1].timeSlots[idx2].items[idx3].text = newText;
+                } else if (type === 'recipe-ing') {
+                    this.data.recipes[idx1].ingredients[idx2].text = newText;
+                } else if (type === 'recipe-step') {
+                    this.data.recipes[idx1].steps[idx2].text = newText;
+                } else if (type === 'shop') {
+                    this.data.shopping[idx1].items[idx2].text = newText;
+                }
+                this.save();
+            },
+
+            addItem(type, idx1, idx2) {
+                if (type === 'schedule') {
+                    this.data.schedule[idx1].timeSlots[idx2].items.push({text: "Ny uppgift...", checked: false});
+                } else if (type === 'shop') {
+                    this.data.shopping[idx1].items.push({text: "Ny vara...", checked: false});
+                }
+                this.save();
+                this.renderAll();
+            },
+
+            deleteItem(type, idx1, idx2, idx3) {
+                if (type === 'schedule') {
+                    this.data.schedule[idx1].timeSlots[idx2].items.splice(idx3, 1);
+                } else if (type === 'shop') {
+                    this.data.shopping[idx1].items.splice(idx2, 1);
+                }
+                this.save();
+                this.renderAll();
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
