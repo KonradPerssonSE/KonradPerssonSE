@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dominion Tracker</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#f8fafc">
+    
+    <!-- Manifest for PWA installation (Embedded) -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkRvbWluaW9uIFRyYWNrZXIiLAogICJzaG9ydF9uYW1lIjogIkRvbWluaW9uIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmOGZhZmMiLAogICJ0aGVtZV9jb2xvciIjogIiNmOGZhZmMiLAogICJpY29ucyI6IFtdCn0=">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Recharts -->
+    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+
+    <style>
+        /* Custom scrollbar for cleaner look */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        body { -webkit-tap-highlight-color: transparent; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } = Recharts;
+
+        // --- ICONS (SVG Components) ---
+        const Icon = ({ path, size = 20, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        const Icons = {
+            Trophy: <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18m-2 0h-8v6a6 6 0 0 0 8 0v-6Z" />,
+            List: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
+            Chart: <path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3" />,
+            Plus: <path d="M5 12h14M12 5v14" />,
+            Trash: <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" />,
+            Edit: <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />,
+            Save: <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8V3" />,
+            X: <path d="M18 6 6 18M6 6l12 12" />,
+            Crown: <path d="m5 18 14 6-14-6Z" /><path d="M12 2l4 7h6l-5 5 2 6-7-4-7 4 2-6-5-5h6l4-7Z" />, // simplified star/crown
+            Calendar: <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+        };
+
+        // --- INITIAL DATA ---
+        const DEFAULT_GAMES = [
+            { id: 1, name: "Round 1", set: "The Good Life", date: "2023-10-27", ranking: ["Tor", "Konrad", "Frej"] },
+            { id: 2, name: "Round 2", set: "Standard Game", date: "2023-10-27", ranking: ["Frej", "Tor", "Konrad"] },
+            { id: 3, name: "Round 3", set: "Exploding Kingdom", date: "2023-12-02", ranking: ["Frej", "Tor", "Konrad"] }
+        ];
+
+        // --- UTILS ---
+        const getUniquePlayers = (games) => {
+            const players = new Set();
+            games.forEach(g => g.ranking.forEach(p => players.add(p)));
+            return Array.from(players);
+        };
+
+        // --- COMPONENTS ---
+
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden ${className}`}>
+                {children}
+            </div>
+        );
+
+        const Modal = ({ isOpen, onClose, title, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center p-4 border-b border-slate-100">
+                            <h3 className="text-lg font-bold">{title}</h3>
+                            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
+                                <Icon path={Icons.X} size={20} />
+                            </button>
+                        </div>
+                        <div className="p-4">
+                            {children}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const GameForm = ({ initialData, onSave, onCancel, allPlayers }) => {
+            const [name, setName] = useState(initialData?.name || `Round`);
+            const [set, setSet] = useState(initialData?.set || "");
+            const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+            
+            // Ranking state is array of player names. Index 0 = 1st place.
+            // We initialize with 3 empty slots if new, or the existing ranking.
+            const [ranking, setRanking] = useState(initialData?.ranking || ["", "", ""]);
+
+            // Helper to update a specific rank position
+            const updateRank = (index, value) => {
+                const newRanking = [...ranking];
+                newRanking[index] = value;
+                setRanking(newRanking);
+            };
+
+            const addPlayerSlot = () => setRanking([...ranking, ""]);
+            const removePlayerSlot = (index) => setRanking(ranking.filter((_, i) => i !== index));
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                // Filter out empty names
+                const cleanRanking = ranking.filter(p => p.trim() !== "");
+                if (cleanRanking.length < 2) {
+                    alert("Need at least 2 players to save a game.");
+                    return;
+                }
+                onSave({
+                    id: initialData?.id || Date.now(),
+                    name,
+                    set,
+                    date,
+                    ranking: cleanRanking
+                });
+            };
+
+            // Suggestions for autocomplete
+            const suggestions = allPlayers.filter(p => !ranking.includes(p));
+
+            return (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Round Name</label>
+                            <input 
+                                type="text" 
+                                required
+                                value={name} 
+                                onChange={e => setName(e.target.value)} 
+                                className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                placeholder="e.g. Round 4"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Set Played</label>
+                            <input 
+                                type="text" 
+                                value={set} 
+                                onChange={e => setSet(e.target.value)} 
+                                className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                placeholder="e.g. Seaside"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Results (Ranked)</label>
+                        <div className="space-y-2">
+                            {ranking.map((player, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                    <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm shrink-0 
+                                        ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : 
+                                          idx === 1 ? 'bg-slate-200 text-slate-700' : 
+                                          idx === 2 ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-500'}`}>
+                                        {idx + 1}
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        list="players-list"
+                                        value={player} 
+                                        onChange={e => updateRank(idx, e.target.value)}
+                                        className="flex-1 p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        placeholder={`Player Name`}
+                                    />
+                                    {ranking.length > 2 && (
+                                        <button 
+                                            type="button" 
+                                            onClick={() => removePlayerSlot(idx)}
+                                            className="p-2 text-red-400 hover:bg-red-50 rounded-lg"
+                                        >
+                                            <Icon path={Icons.Trash} size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <button 
+                            type="button" 
+                            onClick={addPlayerSlot}
+                            className="mt-3 text-sm text-indigo-600 font-medium hover:underline flex items-center gap-1"
+                        >
+                            <Icon path={Icons.Plus} size={14} /> Add Player Slot
+                        </button>
+
+                        <datalist id="players-list">
+                            {allPlayers.map(p => <option key={p} value={p} />)}
+                        </datalist>
+                    </div>
+
+                    <div className="pt-4 flex gap-3">
+                        <button 
+                            type="button" 
+                            onClick={onCancel}
+                            className="flex-1 py-2 px-4 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            className="flex-1 py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold shadow-sm"
+                        >
+                            Save Result
+                        </button>
+                    </div>
+                </form>
+            );
+        };
+
+        const App = () => {
+            // --- STATE ---
+            const [games, setGames] = useState(() => {
+                const saved = localStorage.getItem('dominion_games');
+                return saved ? JSON.parse(saved) : DEFAULT_GAMES;
+            });
+            const [view, setView] = useState('leaderboard');
+            const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+            const [editingGame, setEditingGame] = useState(null);
+
+            // --- EFFECTS ---
+            useEffect(() => {
+                localStorage.setItem('dominion_games', JSON.stringify(games));
+            }, [games]);
+
+            // --- DERIVED DATA ---
+            const allPlayers = useMemo(() => getUniquePlayers(games), [games]);
+
+            const { leaderboard, history } = useMemo(() => {
+                const players = {};
+                const hist = [];
+                const cumulativeScores = {};
+
+                // Init potential players
+                allPlayers.forEach(p => {
+                    players[p] = { name: p, totalScore: 0, gamesPlayed: 0, wins: 0, placements: [] };
+                    cumulativeScores[p] = 0;
+                });
+
+                games.forEach(game => {
+                    const playerCount = game.ranking.length;
+                    const chartEntry = { name: game.name, set: game.set, id: game.id };
+                    
+                    // We need to ensure we carry over previous scores for players who might not be in this game
+                    // for the chart to be accurate (flat line instead of null).
+                    allPlayers.forEach(p => chartEntry[p] = cumulativeScores[p]);
+
+                    game.ranking.forEach((player, index) => {
+                        const points = playerCount - index;
+                        const rank = index + 1;
+
+                        if (!players[player]) {
+                             // Safety check if new player appears in old game logic
+                             players[player] = { name: player, totalScore: 0, gamesPlayed: 0, wins: 0, placements: [] };
+                             cumulativeScores[player] = 0;
+                        }
+
+                        players[player].totalScore += points;
+                        players[player].gamesPlayed += 1;
+                        players[player].placements.push(rank);
+                        if (rank === 1) players[player].wins += 1;
+
+                        cumulativeScores[player] += points;
+                        chartEntry[player] = cumulativeScores[player];
+                    });
+                    hist.push(chartEntry);
+                });
+
+                const sortedLeaderboard = Object.values(players).sort((a, b) => {
+                    if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+                    return b.wins - a.wins;
+                });
+
+                return { leaderboard: sortedLeaderboard, history: hist };
+            }, [games, allPlayers]);
+
+            // --- HANDLERS ---
+            const handleSaveGame = (gameData) => {
+                if (editingGame) {
+                    setGames(games.map(g => g.id === gameData.id ? gameData : g));
+                    setEditingGame(null);
+                } else {
+                    setGames([...games, gameData]);
+                    setIsAddModalOpen(false);
+                }
+            };
+
+            const handleDeleteGame = (id) => {
+                if(confirm("Are you sure you want to delete this round?")) {
+                    setGames(games.filter(g => g.id !== id));
+                }
+            };
+
+            const COLORS = {
+                Tor: "#3b82f6", Frej: "#ef4444", Konrad: "#10b981", 
+                // Fallbacks for new players
+                p4: "#8b5cf6", p5: "#f59e0b", p6: "#ec4899"
+            };
+
+            const getColor = (name, index) => COLORS[name] || Object.values(COLORS)[index % Object.values(COLORS).length];
+
+            // --- RENDER HELPERS ---
+            const TabButton = ({ id, icon, label }) => (
+                <button
+                    onClick={() => setView(id)}
+                    className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                        view === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                >
+                    <Icon path={icon} size={16} />
+                    <span className="hidden sm:inline">{label}</span>
+                </button>
+            );
+
+            return (
+                <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-24 sm:pb-6">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <div>
+                            <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-900">
+                                <span className="text-yellow-500"><Icon path={Icons.Trophy} /></span>
+                                Dominion League
+                            </h1>
+                            <p className="text-slate-500 text-sm">
+                                {leaderboard[0] ? `${leaderboard[0].name} is leading with ${leaderboard[0].totalScore} pts` : "No games played"}
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                // Predict next round name
+                                const nextNum = games.length + 1;
+                                setEditingGame(null); 
+                                setIsAddModalOpen(true);
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                        >
+                            <Icon path={Icons.Plus} /> New Game
+                        </button>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex p-1 bg-slate-200 rounded-lg mb-6 sticky top-2 z-10 shadow-sm/50 backdrop-blur-sm bg-slate-200/90">
+                        <TabButton id="leaderboard" icon={Icons.Trophy} label="Leaderboard" />
+                        <TabButton id="history" icon={Icons.List} label="History" />
+                        <TabButton id="charts" icon={Icons.Chart} label="Analytics" />
+                    </div>
+
+                    {/* CONTENT */}
+                    <div className="space-y-4">
+                        
+                        {/* VIEW: LEADERBOARD */}
+                        {view === 'leaderboard' && (
+                            <div className="grid grid-cols-1 gap-3">
+                                {leaderboard.map((player, idx) => (
+                                    <Card key={player.name} className="flex flex-col sm:flex-row items-center p-4 sm:p-6 gap-4 sm:gap-6">
+                                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                                            <div className={`flex items-center justify-center w-12 h-12 rounded-full text-xl font-bold border-2 shrink-0 ${
+                                                idx === 0 ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+                                                idx === 1 ? 'bg-slate-50 border-slate-200 text-slate-700' :
+                                                'bg-orange-50 border-orange-200 text-orange-800'
+                                            }`}>
+                                                {idx + 1}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="text-xl font-bold">{player.name}</h3>
+                                                <div className="flex gap-2 text-xs font-semibold uppercase tracking-wider">
+                                                    <span className="text-slate-500">Rank {idx + 1}</span>
+                                                    {idx === 0 && <span className="text-yellow-600 flex items-center gap-1"><Icon path={Icons.Crown} size={12}/> Leader</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 w-full border-t sm:border-t-0 sm:border-l border-slate-100 pt-4 sm:pt-0 sm:pl-6">
+                                            <div className="text-center sm:text-left">
+                                                <p className="text-[10px] uppercase text-slate-400 font-bold">Points</p>
+                                                <p className="text-2xl font-bold text-indigo-600">{player.totalScore}</p>
+                                            </div>
+                                            <div className="text-center sm:text-left">
+                                                <p className="text-[10px] uppercase text-slate-400 font-bold">Wins</p>
+                                                <p className="text-xl font-bold text-slate-700">{player.wins}</p>
+                                            </div>
+                                            <div className="text-center sm:text-left">
+                                                <p className="text-[10px] uppercase text-slate-400 font-bold">Games</p>
+                                                <p className="text-xl font-bold text-slate-700">{player.gamesPlayed}</p>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                                {leaderboard.length === 0 && (
+                                    <div className="text-center p-12 text-slate-400">No games recorded yet.</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* VIEW: HISTORY */}
+                        {view === 'history' && (
+                            <div className="space-y-3">
+                                {games.slice().reverse().map((game) => (
+                                    <Card key={game.id} className="p-4">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h3 className="font-bold text-lg text-slate-800">{game.name}</h3>
+                                                <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                                                    {game.set && <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{game.set}</span>}
+                                                    <span>• {game.date}</span>
+                                                </p>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button 
+                                                    onClick={() => setEditingGame(game)} 
+                                                    className="p-2 text-slate-400 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Icon path={Icons.Edit} size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteGame(game.id)} 
+                                                    className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Icon path={Icons.Trash} size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Rank Strip */}
+                                        <div className="flex flex-wrap gap-2">
+                                            {game.ranking.map((p, i) => (
+                                                <div key={i} className={`flex items-center gap-2 pr-3 py-1 rounded-full text-sm border ${
+                                                    i === 0 ? 'bg-yellow-50 border-yellow-200 text-yellow-800 pl-1' :
+                                                    i === 1 ? 'bg-slate-50 border-slate-200 text-slate-700 pl-2' :
+                                                    'bg-white border-slate-100 text-slate-500 pl-2'
+                                                }`}>
+                                                    {i === 0 && <span className="bg-yellow-400 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">1</span>}
+                                                    <span className="font-semibold">{p}</span>
+                                                    <span className="text-xs opacity-60">+{game.ranking.length - i}pts</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                ))}
+                                {games.length === 0 && (
+                                    <div className="text-center p-12 text-slate-400">No history found. Add a game!</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* VIEW: CHARTS */}
+                        {view === 'charts' && (
+                            <div className="space-y-6">
+                                <Card className="p-4 sm:p-6">
+                                    <h3 className="text-lg font-bold mb-4">Score Race</h3>
+                                    <div className="h-[300px] w-full text-xs">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={history} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b'}} dy={10} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b'}} />
+                                                <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                                <Legend wrapperStyle={{paddingTop: '20px'}}/>
+                                                {allPlayers.map((p, i) => (
+                                                    <Line 
+                                                        key={p} 
+                                                        type="monotone" 
+                                                        dataKey={p} 
+                                                        stroke={getColor(p, i)} 
+                                                        strokeWidth={3} 
+                                                        dot={{r: 4}} 
+                                                        activeDot={{r: 6}} 
+                                                    />
+                                                ))}
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </Card>
+
+                                <Card className="p-4 sm:p-6">
+                                    <h3 className="text-lg font-bold mb-4">Win Distribution</h3>
+                                    <div className="h-[250px] w-full text-xs">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={leaderboard} layout="vertical" margin={{ left: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                                                <XAxis type="number" hide />
+                                                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={80} tick={{fill: '#334155', fontWeight: 600}} />
+                                                <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                                <Bar dataKey="wins" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} name="Wins" />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </Card>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* MODAL: ADD/EDIT GAME */}
+                    <Modal 
+                        isOpen={isAddModalOpen || !!editingGame} 
+                        onClose={() => { setIsAddModalOpen(false); setEditingGame(null); }}
+                        title={editingGame ? "Edit Round" : "New Round"}
+                    >
+                        <GameForm 
+                            initialData={editingGame} 
+                            allPlayers={allPlayers}
+                            onSave={handleSaveGame} 
+                            onCancel={() => { setIsAddModalOpen(false); setEditingGame(null); }} 
+                        />
+                    </Modal>
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
