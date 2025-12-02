@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Julkalkon Projektet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"IBM Plex Mono"', 'monospace'],
+                    },
+                    colors: {
+                        paper: '#fdfbf7',
+                        ink: '#1a1a1a',
+                        accent: '#e63946',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #fdfbf7;
+            --text-color: #1a1a1a;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: "IBM Plex Mono", monospace;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Typewriter aesthetics */
+        h1, h2, h3, h4 {
+            font-weight: 500;
+            letter-spacing: -0.5px;
+        }
+
+        .border-ink {
+            border-color: var(--text-color);
+        }
+
+        /* Checkbox styling */
+        .check-box {
+            appearance: none;
+            -webkit-appearance: none;
+            min-width: 1.1em;
+            height: 1.1em;
+            border: 1px solid var(--text-color);
+            margin-right: 0.75rem;
+            margin-top: 0.15rem; 
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .check-box::before {
+            content: "";
+            width: 0.6em;
+            height: 0.6em;
+            background-color: var(--text-color);
+            transform: scale(0);
+            transition: 0.2s transform ease-in-out;
+        }
+
+        .check-box:checked::before {
+            transform: scale(1);
+        }
+
+        .check-box:checked + span, 
+        .check-box:checked + div {
+            text-decoration: line-through;
+            opacity: 0.4;
+        }
+
+        /* Tab Navigation */
+        .tab-btn.active {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        /* Content Editable */
+        [contenteditable]:empty:before {
+            content: attr(placeholder);
+            color: #999;
+            font-style: italic;
+        }
+        
+        [contenteditable]:focus {
+            outline: none;
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        /* Print Styling */
+        @media print {
+            @page {
+                size: A4;
+                margin: 20mm;
+            }
+
+            body {
+                background: white;
+                color: black;
+                font-size: 10pt;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            /* Ensure content is visible */
+            .tab-content {
+                display: block !important;
+            }
+            
+            /* Hide non-active tabs in print? 
+               Actually, let's print EVERYTHING sequentially for a complete manual. 
+            */
+            
+            h1 { font-size: 24pt; margin-bottom: 1cm; text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; }
+            h2 { font-size: 16pt; margin-top: 1cm; border-bottom: 1px solid black; padding-bottom: 5px; page-break-after: avoid; }
+            h3 { font-size: 12pt; font-weight: bold; margin-top: 0.5cm; }
+            
+            /* Break pages logically */
+            #section-schedule, #section-recipes, #section-shopping {
+                page-break-after: always;
+                display: block !important; /* Force show all sections */
+            }
+
+            /* Recipe layout in print */
+            .recipe-card {
+                break-inside: avoid;
+                margin-bottom: 1cm;
+                border: none !important;
+                padding: 0 !important;
+            }
+            
+            /* Schedule layout */
+            .schedule-day {
+                break-inside: avoid;
+                margin-bottom: 1cm;
+            }
+
+            /* Hide checkboxes in print for cleaner look, use bullets instead */
+            input[type="checkbox"] {
+                display: none;
+            }
+            
+            .check-box + div::before,
+            .check-box + span::before {
+                content: "☐ ";
+                font-weight: bold;
+            }
+
+            .check-box:checked + div,
+            .check-box:checked + span {
+                text-decoration: none !important;
+                opacity: 1 !important;
+            }
+            
+            .check-box:checked + div::before,
+            .check-box:checked + span::before {
+                content: "☑ ";
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-6 px-4 sm:px-8">
+
+    <main class="w-full max-w-3xl relative">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-ink pb-4">
+            <div class="w-full md:w-auto text-center md:text-left">
+                <h1 class="text-3xl sm:text-4xl font-semibold tracking-tighter uppercase">Julkalkonen</h1>
+                <p class="text-xs uppercase tracking-widest mt-1 opacity-70">Projektplan & Logistik</p>
+            </div>
+            
+            <div class="flex gap-4 text-xs no-print mt-4 md:mt-0 w-full md:w-auto justify-center">
+                <button onclick="app.toggleEditMode()" id="btn-edit" class="hover:bg-ink hover:text-paper px-3 py-1 border border-transparent transition">
+                    [REDIGERA]
+                </button>
+                <button onclick="app.resetData()" class="hover:bg-ink hover:text-paper px-3 py-1 border border-transparent transition text-red-700 opacity-50 hover:opacity-100">
+                    [ÅTERSTÄLL]
+                </button>
+                <button onclick="window.print()" class="hover:bg-ink hover:text-paper px-3 py-1 border border-ink transition">
+                    [SKRIV UT]
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs (No-print) -->
+        <nav class="flex border-b border-gray-200 mb-8 no-print sticky top-0 bg-[#fdfbf7] z-10 pt-2">
+            <button onclick="app.switchTab('schedule')" id="tab-schedule" class="tab-btn active flex-1 py-3 text-sm uppercase tracking-wider hover:bg-gray-100 transition">Körschema</button>
+            <button onclick="app.switchTab('recipes')" id="tab-recipes" class="tab-btn flex-1 py-3 text-sm uppercase tracking-wider hover:bg-gray-100 transition">Recept</button>
+            <button onclick="app.switchTab('shopping')" id="tab-shopping" class="tab-btn flex-1 py-3 text-sm uppercase tracking-wider hover:bg-gray-100 transition">Inköp</button>
+        </nav>
+
+        <!-- CONTENT: SCHEME -->
+        <section id="section-schedule" class="tab-content block">
+            <div class="print-header hidden print:block text-2xl font-bold mb-4 uppercase">Körschema 25-27 Dec</div>
+            <div id="schedule-container" class="space-y-12">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- CONTENT: RECIPES -->
+        <section id="section-recipes" class="tab-content hidden">
+            <div class="print-header hidden print:block text-2xl font-bold mb-4 uppercase">Recept</div>
+            <div id="recipes-container" class="space-y-16">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- CONTENT: SHOPPING -->
+        <section id="section-shopping" class="tab-content hidden">
+            <div class="print-header hidden print:block text-2xl font-bold mb-4 uppercase">Inköpslista</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8" id="shopping-container">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-20 py-8 text-center text-[10px] opacity-40 uppercase tracking-widest no-print">
+        IBM Plex Mono • Local Storage • Projektledning
+    </footer>
+
+    <script>
+        const appData = {
+            schedule: [
+                {
+                    day: "25 DEC - Kalkondag & Baser",
+                    timeSlots: [
+                        { time: "13:00", title: "Förberedelser", items: [
+                            { text: "Tina kalkonen/kalkonerna.", checked: false },
+                            { text: "Plocka fram smör, örter, citron, lök, morot, selleri, buljong.", checked: false },
+                            { text: "Blanda kryddsmör (rumsvarmt smör, salt, peppar, örter, vitlök).", checked: false }
+                        ]},
+                        { time: "13:30", title: "Preppa Kalkon", items: [
+                            { text: "Torka kalkonen torr.", checked: false },
+                            { text: "Salta & peppra ordentligt (in/ut).", checked: false },
+                            { text: "Lägg lök, morot, selleri, citron i formen.", checked: false },
+                            { text: "Fyll kalkon med citron/örter (ej stuffing).", checked: false },
+                            { text: "Gnid in med kryddsmör (under skinnet!).", checked: false }
+                        ]},
+                        { time: "14:00", title: "In i ugnen", items: [
+                            { text: "Ugn 175°C.", checked: false },
+                            { text: "Stek till 72°C i lår (ca 3-3.5h för 6-7kg).", checked: false },
+                            { text: "Ös med sky varje timme.", checked: false }
+                        ]},
+                        { time: "Medan kalkonen steker", title: "Sido-prepp", items: [
+                            { text: "Gör brödstuffing (se recept). Plasta & kyl.", checked: false },
+                            { text: "Koka sviskonkompott. Kyl.", checked: false },
+                            { text: "Häll av sky till kastrull när kalkonen släpper vätska.", checked: false }
+                        ]},
+                        { time: "ca 17:00", title: "Efter ugn", items: [
+                            { text: "Vila kalkon 30-45 min.", checked: false },
+                            { text: "Stycka: Skiva bröst, dela lår.", checked: false },
+                            { text: "Lägg kött i form. Häll på silad sky/vatten.", checked: false },
+                            { text: "Gör såsbas på resten av skyn (redning + sky). Kyl.", checked: false },
+                            { text: "Kyl ner allt ordentligt.", checked: false }
+                        ]}
+                    ]
+                },
+                {
+                    day: "26 DEC - Grönsaker",
+                    timeSlots: [
+                        { time: "När som", title: "Grönt", items: [
+                            { text: "Brysselkål: Rensa, halvera, förkoka 3-4 min, kyl.", checked: false },
+                            { text: "Potatis: Skala 4.5kg, lägg i vattenbad i kyl.", checked: false },
+                            { text: "Vegorätt: Rosta rotfrukter (om aktuellt).", checked: false },
+                            { text: "Inventera: Har vi grädde, gelé, smör?", checked: false }
+                        ]}
+                    ]
+                },
+                {
+                    day: "27 DEC - Servering (Mål 14:00)",
+                    timeSlots: [
+                        { time: "10:30", title: "Framtagning", items: [
+                            { text: "Ta fram allt från kylen (temp-utjämning).", checked: false }
+                        ]},
+                        { time: "11:00", title: "Ugn & Potatis", items: [
+                            { text: "Ugn 175°C.", checked: false },
+                            { text: "Byt vatten på potatis, salta.", checked: false }
+                        ]},
+                        { time: "11:15", title: "Baka Stuffing", items: [
+                            { text: "Stuffing i ugn 30-40 min (gyllene).", checked: false },
+                            { text: "Ta ut, varmhåll under folie.", checked: false }
+                        ]},
+                        { time: "12:00", title: "Värm Kalkon", items: [
+                            { text: "Sänk ugn till 150-160°C.", checked: false },
+                            { text: "Kalkonformar in (täckta med folie). Ca 45-60 min.", checked: false }
+                        ]},
+                        { time: "12:30", title: "Koka", items: [
+                            { text: "Koka potatis (20-25 min).", checked: false }
+                        ]},
+                        { time: "12:40", title: "Stek & Sås", items: [
+                            { text: "Stek brysselkål i smör (ev bacon/nötter).", checked: false },
+                            { text: "Värm vegorätt i ugn.", checked: false },
+                            { text: "Värm såsbas, späd med grädde, smaka av (soja/gelé).", checked: false }
+                        ]},
+                        { time: "13:30", title: "Uppläggning", items: [
+                            { text: "Kalkon på fat (skeda över sky).", checked: false },
+                            { text: "Stuffing, sås, tillbehör fram.", checked: false },
+                            { text: "ÄT!", checked: false }
+                        ]}
+                    ]
+                }
+            ],
+            recipes: [
+                {
+                    id: 1,
+                    title: "Ugnsstekt Kalkon",
+                    meta: "6-7 kg | 25:e Dec",
+                    ingredients: [
+                        { text: "6-7 kg Kalkon (ex. 2 mindre)", checked: false },
+                        { text: "200g Smör", checked: false },
+                        { text: "2 Citroner", checked: false },
+                        { text: "3 Gula lökar", checked: false },
+                        { text: "3 Morötter", checked: false },
+                        { text: "3 Blekselleristjälkar", checked: false },
+                        { text: "Färska örter (Salvia, Rosmarin, Timjan)", checked: false },
+                        { text: "5-7 dl Buljong (till formen)", checked: false }
+                    ],
+                    steps: [
+                        { text: "Gör en bädd av grovhackade grönsaker i formen.", checked: false },
+                        { text: "Fyll kalkonen med citronklyftor och örter.", checked: false },
+                        { text: "Massera in kryddsmör överallt.", checked: false },
+                        { text: "Stek 175°C till 72°C innerlår.", checked: false }
+                    ]
+                },
+                {
+                    id: 2,
+                    title: "Brödstuffing med Sviskon",
+                    meta: "Sidovrätt | 25:e (Prepp) / 27:e (Bak)",
+                    ingredients: [
+                        { text: "1 kg Ljust bröd (gärna torrt)", checked: false },
+                        { text: "150g Smör", checked: false },
+                        { text: "3 Gula lökar (hackade)", checked: false },
+                        { text: "4 Blekselleristjälkar (hackade)", checked: false },
+                        { text: "3 Äpplen (tärnade)", checked: false },
+                        { text: "300-400g Katrinplommon (hackade)", checked: false },
+                        { text: "1-1.2 L Buljong", checked: false },
+                        { text: "2 Ägg", checked: false },
+                        { text: "Massor av Salvia", checked: false }
+                    ],
+                    steps: [
+                        { text: "Tärna bröd. Rosta lätt i ugn.", checked: false },
+                        { text: "Fräs lök och selleri mjukt i smör.", checked: false },
+                        { text: "Tillsätt äpple och sviskon, fräs kort.", checked: false },
+                        { text: "Blanda bröd, fräs och örter i bunke.", checked: false },
+                        { text: "Vispa ägg + buljong. Häll över. Blanda till fuktig massa.", checked: false },
+                        { text: "Lägg i form. Baka 30-40 min 175°C (på serveringsdagen).", checked: false }
+                    ]
+                },
+                {
+                    id: 3,
+                    title: "Sviskonkompott & Brysselkål",
+                    meta: "Tillbehör",
+                    ingredients: [
+                        { text: "400g Katrinplommon", checked: false },
+                        { text: "1 Kanelstång", checked: false },
+                        { text: "3 kg Brysselkål", checked: false },
+                        { text: "150g Smör (till stekning)", checked: false },
+                        { text: "Ev. 200g Bacon / Nötter", checked: false }
+                    ],
+                    steps: [
+                        { text: "Kompott: Koka plommon, vatten, socker, kanel tills mjukt. Kyl.", checked: false },
+                        { text: "Kål: Förkoka, kyl. Vid servering: stek hårt i smör.", checked: false }
+                    ]
+                },
+                {
+                    id: 4,
+                    title: "Brunsås på Sky",
+                    meta: "Sås",
+                    ingredients: [
+                        { text: "Steksky från kalkon", checked: false },
+                        { text: "50g Smör", checked: false },
+                        { text: "1 dl Vetemjöl", checked: false },
+                        { text: "5-6 dl Grädde", checked: false },
+                        { text: "Soja & Gelé", checked: false }
+                    ],
+                    steps: [
+                        { text: "Smält smör, vispa i mjöl. Späd med sky+buljong.", checked: false },
+                        { text: "Koka ihop basen 25:e.", checked: false },
+                        { text: "27:e: Värm, i med grädde, smaka av med gelé/soja.", checked: false }
+                    ]
+                },
+                {
+                    id: 5,
+                    title: "Vego: Rostade Rotfrukter",
+                    meta: "Vegetariskt",
+                    ingredients: [
+                        { text: "1 kg Morötter", checked: false },
+                        { text: "800g Palsternacka", checked: false },
+                        { text: "2 Rödlökar", checked: false },
+                        { text: "2-3 burkar Kikärter", checked: false },
+                        { text: "200g Fetaost", checked: false }
+                    ],
+                    steps: [
+                        { text: "Tärna allt. Rosta med olja/kryddor 200°C ca 40 min.", checked: false },
+                        { text: "Vid servering: Toppa med feta, värm.", checked: false }
+                    ]
+                }
+            ],
+            shopping: [
+                {
+                    category: "Kött & Mejeri",
+                    items: [
+                        { text: "Kalkon (6-7kg totalt)", checked: false },
+                        { text: "Smör (500g)", checked: false },
+                        { text: "Vispgrädde (6dl)", checked: false },
+                        { text: "Fetaost (200-300g)", checked: false },
+                        { text: "Ägg (minst 2st)", checked: false },
+                        { text: "Bacon (2pkt, valfritt)", checked: false }
+                    ]
+                },
+                {
+                    category: "Frukt & Grönt",
+                    items: [
+                        { text: "Potatis (4.5kg)", checked: false },
+                        { text: "Brysselkål (3kg)", checked: false },
+                        { text: "Gul lök (6st)", checked: false },
+                        { text: "Rödlök (2st)", checked: false },
+                        { text: "Morötter (1.5kg)", checked: false },
+                        { text: "Palsterna
