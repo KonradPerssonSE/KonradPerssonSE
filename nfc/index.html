@@ -3,383 +3,528 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFC Tag Validator</title>
+    <title>NFC Debugger Pro</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts: Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts (JetBrains Mono for code) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- Meta for PWA -->
-    <meta name="theme-color" content="#2563EB">
+    <!-- PWA Settings -->
+    <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- Icons using FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        /* Custom Scrollbar for records */
-        .records-scroll::-webkit-scrollbar { width: 4px; }
-        .records-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .records-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* Pulse animation for scanning state */
-        @keyframes scan-pulse {
-            0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
-            70% { box-shadow: 0 0 0 20px rgba(37, 99, 235, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+        /* Animation for Scan Pulse */
+        @keyframes radar {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
-        .animate-scan { animation: scan-pulse 2s infinite; }
+        .scanning-active { animation: radar 2s infinite; }
+        
+        /* Tab Transitions */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.2s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- App Header -->
-    <header class="bg-blue-600 text-white p-4 shadow-lg shrink-0 z-10">
-        <div class="flex justify-between items-center max-w-2xl mx-auto">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fa-solid fa-nfc-symbol"></i> Validator
-            </h1>
-            <div id="connection-status" class="text-xs font-mono bg-blue-700 px-2 py-1 rounded">
-                Ready
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 shrink-0 z-20">
+        <div class="flex justify-between items-center max-w-3xl mx-auto">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold">
+                    <i class="fa-solid fa-bug"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-white text-lg leading-tight">NFC Debugger</h1>
+                    <p class="text-[10px] text-slate-400 font-mono">V2.0 // RAW DATA MODE</p>
+                </div>
+            </div>
+            <div id="status-indicator" class="text-xs font-mono px-2 py-1 rounded bg-slate-800 text-slate-400">
+                IDLE
             </div>
         </div>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto p-4 pb-24 max-w-2xl mx-auto w-full">
+    <!-- Navigation Tabs -->
+    <nav class="bg-slate-900 border-b border-slate-800 shrink-0">
+        <div class="flex max-w-3xl mx-auto">
+            <button onclick="switchTab('scan')" id="tab-scan" class="flex-1 py-3 text-sm font-semibold border-b-2 border-blue-500 text-blue-400 transition-colors">
+                <i class="fa-solid fa-satellite-dish mr-2"></i>Scanner
+            </button>
+            <button onclick="switchTab('history')" id="tab-history" class="flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition-colors">
+                <i class="fa-solid fa-clock-rotate-left mr-2"></i>History
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto relative bg-slate-950">
         
-        <!-- Welcome / Empty State -->
-        <div id="empty-state" class="flex flex-col items-center justify-center h-full text-center text-slate-400">
-            <i class="fa-solid fa-mobile-screen-button text-6xl mb-4 text-slate-200"></i>
-            <p class="text-lg font-medium text-slate-500">Tap "Start Scan" to read a tag</p>
-            <p class="text-sm mt-2">Make sure NFC is enabled on your device.</p>
-        </div>
+        <!-- SCAN TAB -->
+        <div id="view-scan" class="tab-content active h-full">
+            <div class="max-w-3xl mx-auto p-4 min-h-full flex flex-col">
+                
+                <!-- Action Area -->
+                <div class="mb-6 bg-slate-900 rounded-xl p-6 border border-slate-800 shadow-xl text-center">
+                    <button id="btn-scan" class="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 text-slate-400 text-3xl flex items-center justify-center mx-auto mb-4 transition-all active:scale-95 shadow-lg">
+                        <i class="fa-solid fa-power-off"></i>
+                    </button>
+                    <h2 id="scan-status-text" class="text-xl font-bold text-white mb-1">Tap to Start</h2>
+                    <p class="text-xs text-slate-500">Enable NFC in Android Settings</p>
+                </div>
 
-        <!-- Tag Result Card (Hidden by default) -->
-        <div id="result-card" class="hidden space-y-4">
-            
-            <!-- Meta Info -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-4 opacity-10">
-                    <i class="fa-solid fa-wifi text-6xl"></i>
-                </div>
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Tag Serial Number (UID)</h2>
-                <div id="tag-uid" class="text-2xl font-mono font-bold text-blue-600 tracking-wide">
-                    --
-                </div>
-                <div class="mt-4 flex gap-4 text-sm text-slate-500">
-                    <div>
-                        <span class="block text-xs font-bold text-slate-400 uppercase">Records</span>
-                        <span id="record-count" class="font-semibold text-slate-700">0</span>
+                <!-- Latest Result Container -->
+                <div id="latest-result" class="hidden flex-1">
+                    <div class="flex justify-between items-end mb-2">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Latest Capture</h3>
+                        <span class="text-[10px] bg-green-900 text-green-300 px-2 py-0.5 rounded font-mono">LIVE</span>
                     </div>
-                    <div>
-                        <span class="block text-xs font-bold text-slate-400 uppercase">Status</span>
-                        <span class="font-semibold text-green-600 flex items-center gap-1">
-                            <i class="fa-solid fa-check-circle"></i> Readable
-                        </span>
-                    </div>
+                    <div id="latest-result-content"></div>
+                </div>
+
+                <!-- Empty State for Scan -->
+                <div id="scan-empty" class="flex-1 flex flex-col items-center justify-center text-slate-700 opacity-50">
+                    <i class="fa-brands fa-usb text-6xl mb-4"></i>
+                    <p class="font-mono text-sm">Waiting for tag data stream...</p>
                 </div>
             </div>
-
-            <!-- Records List -->
-            <div class="space-y-3">
-                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Data Records</h3>
-                <div id="records-container" class="space-y-3">
-                    <!-- Records injected here by JS -->
-                </div>
-            </div>
-
         </div>
 
-        <!-- Error State (Hidden by default) -->
-        <div id="error-state" class="hidden bg-red-50 border border-red-100 rounded-xl p-4 mt-4">
-            <div class="flex items-start gap-3">
-                <i class="fa-solid fa-triangle-exclamation text-red-500 mt-1"></i>
-                <div>
-                    <h3 class="font-bold text-red-700">Scan Error</h3>
-                    <p id="error-message" class="text-sm text-red-600 mt-1">Unknown error occurred.</p>
+        <!-- HISTORY TAB -->
+        <div id="view-history" class="tab-content h-full">
+            <div class="max-w-3xl mx-auto p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Saved Logs</h3>
+                    <button onclick="clearAllHistory()" class="text-xs text-red-400 hover:text-red-300 border border-red-900 bg-red-900/20 px-3 py-1 rounded transition-colors">
+                        <i class="fa-solid fa-trash mr-1"></i> Clear All
+                    </button>
+                </div>
+                <div id="history-list" class="space-y-3 pb-20">
+                    <!-- History Items Injected Here -->
                 </div>
             </div>
         </div>
 
     </main>
 
-    <!-- Floating Action Button Area -->
-    <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 to-transparent z-20">
-        <div class="max-w-2xl mx-auto flex gap-3">
-            <button id="scan-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-blue-200 flex items-center justify-center gap-3 text-lg">
-                <i class="fa-solid fa-rss"></i>
-                <span id="scan-btn-text">Start Scan</span>
+    <!-- Detail Modal (Overlay) -->
+    <div id="detail-modal" class="fixed inset-0 bg-slate-950 z-50 transform translate-y-full transition-transform duration-300 flex flex-col">
+        <!-- Modal Header -->
+        <div class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shrink-0">
+            <h2 class="font-bold text-white">Scan Details</h2>
+            <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <i class="fa-solid fa-xmark"></i>
             </button>
-            <button id="clear-btn" class="bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all font-bold p-4 rounded-2xl shadow-lg shadow-slate-100 hidden">
-                <i class="fa-solid fa-trash-can"></i>
+        </div>
+        
+        <!-- Modal Content -->
+        <div id="modal-content" class="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full">
+            <!-- Details Injected Here -->
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="p-4 bg-slate-900 border-t border-slate-800 shrink-0 flex gap-3">
+             <button onclick="copyCurrentJSON()" class="flex-1 bg-slate-800 text-slate-300 py-3 rounded-lg font-mono text-xs font-bold hover:bg-slate-700">
+                <i class="fa-solid fa-copy mr-2"></i>COPY JSON
+            </button>
+            <button onclick="deleteCurrentLog()" class="flex-1 bg-red-900/30 text-red-400 border border-red-900/50 py-3 rounded-lg font-mono text-xs font-bold hover:bg-red-900/50">
+                DELETE LOG
             </button>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script>
-        // --- 1. PWA Setup (Manifest & Service Worker) ---
-        
-        // Dynamically create Manifest
-        const manifest = {
-            "name": "NFC Validator",
-            "short_name": "NFC Check",
-            "start_url": "./",
-            "display": "standalone",
-            "background_color": "#F8FAFC",
-            "theme_color": "#2563EB",
-            "icons": [{
-                "src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/svgs/solid/nfc-symbol.svg", 
-                "sizes": "192x192", 
-                "type": "image/svg+xml"
-            }]
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(manifestBlob);
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = manifestURL;
-        document.head.appendChild(link);
+        // --- DATA UTILITIES (The Brains) ---
 
-        // Service Worker for Offline capability
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                const CACHE_NAME = 'nfc-validator-v1';
-                self.addEventListener('install', e => self.skipWaiting());
-                self.addEventListener('activate', e => e.waitUntil(clients.claim()));
-                self.addEventListener('fetch', e => {
-                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-                });
-            `;
-            const swBlob = new Blob([swCode], {type: 'application/javascript'});
-            const swUrl = URL.createObjectURL(swBlob);
-            navigator.serviceWorker.register(swUrl)
-                .then(() => console.log('SW Registered'))
-                .catch(console.error);
+        // Convert DataView to Hex String (00 AF 12 ...)
+        function bufferToHex(dataView) {
+            if (!dataView) return "NULL";
+            const arr = new Uint8Array(dataView.buffer);
+            return Array.from(arr)
+                .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+                .join(' ');
         }
 
-        // --- 2. Application Logic ---
+        // Convert DataView to ASCII string (sanitized)
+        function bufferToAscii(dataView) {
+            if (!dataView) return "";
+            const arr = new Uint8Array(dataView.buffer);
+            let str = "";
+            for (let i = 0; i < arr.length; i++) {
+                const char = arr[i];
+                // Only printable ASCII
+                str += (char > 31 && char < 127) ? String.fromCharCode(char) : '.';
+            }
+            return str;
+        }
 
-        const scanBtn = document.getElementById('scan-btn');
-        const scanBtnText = document.getElementById('scan-btn-text');
-        const clearBtn = document.getElementById('clear-btn');
-        const emptyState = document.getElementById('empty-state');
-        const resultCard = document.getElementById('result-card');
-        const recordsContainer = document.getElementById('records-container');
-        const errorState = document.getElementById('error-state');
-        const errorMessage = document.getElementById('error-message');
-        const tagUid = document.getElementById('tag-uid');
-        const recordCount = document.getElementById('record-count');
-        const connectionStatus = document.getElementById('connection-status');
+        // Convert DataView to Base64 (for storage)
+        function bufferToBase64(dataView) {
+            if(!dataView) return "";
+            let binary = '';
+            const bytes = new Uint8Array(dataView.buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
 
-        let ndef;
+        // Base64 to ArrayBuffer (for retrieval)
+        function base64ToBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return new DataView(bytes.buffer);
+        }
+
+        // --- APP STATE ---
+
+        let ndefReader;
         let isScanning = false;
-        const abortController = new AbortController();
+        let abortController = new AbortController();
+        let historyData = JSON.parse(localStorage.getItem('nfc_debug_history') || '[]');
+        let currentViewingId = null;
 
-        // Feature Detection
-        if (!("NDEFReader" in window)) {
-            showError("Web NFC is not supported on this device or browser. Please use Chrome on Android.");
-            scanBtn.disabled = true;
-            scanBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            scanBtnText.innerText = "NFC Not Supported";
-        }
+        // --- CORE FUNCTIONS ---
 
-        scanBtn.addEventListener('click', async () => {
+        async function toggleScan() {
+            const btn = document.getElementById('btn-scan');
+            const statusText = document.getElementById('scan-status-text');
+            const statusInd = document.getElementById('status-indicator');
+
             if (isScanning) {
-                // Stop Scanning
+                // Stop
                 abortController.abort();
                 isScanning = false;
-                resetUI();
+                btn.classList.remove('scanning-active', 'bg-green-600', 'border-green-400', 'text-white');
+                btn.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-400');
+                btn.innerHTML = '<i class="fa-solid fa-power-off"></i>';
+                statusText.innerText = "Scan Stopped";
+                statusInd.innerText = "IDLE";
+                statusInd.className = "text-xs font-mono px-2 py-1 rounded bg-slate-800 text-slate-400";
+            } else {
+                // Start
+                if (!('NDEFReader' in window)) {
+                    alert("Web NFC not supported on this device.");
+                    return;
+                }
+                
+                try {
+                    abortController = new AbortController();
+                    ndefReader = new NDEFReader();
+                    await ndefReader.scan({ signal: abortController.signal });
+                    
+                    isScanning = true;
+                    btn.classList.add('scanning-active', 'bg-green-600', 'border-green-400', 'text-white');
+                    btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-400');
+                    btn.innerHTML = '<i class="fa-solid fa-wifi"></i>';
+                    statusText.innerText = "Scanning...";
+                    statusInd.innerText = "LISTENING";
+                    statusInd.className = "text-xs font-mono px-2 py-1 rounded bg-green-900 text-green-400 animate-pulse";
+                    
+                    document.getElementById('scan-empty').classList.remove('hidden');
+                    document.getElementById('latest-result').classList.add('hidden');
+
+                    ndefReader.onreading = (event) => {
+                        handleReading(event);
+                    };
+
+                    ndefReader.onreadingerror = () => {
+                        statusText.innerText = "Read Error - Keep Tag Steady";
+                        navigator.vibrate(300);
+                    };
+
+                } catch (error) {
+                    console.error(error);
+                    statusText.innerText = "Error: " + error.message;
+                    isScanning = false;
+                }
+            }
+        }
+
+        function handleReading({ message, serialNumber }) {
+            navigator.vibrate([50, 50]); // Success haptic
+            
+            // 1. Structure Data
+            const scanEntry = {
+                id: crypto.randomUUID(),
+                timestamp: new Date().toISOString(),
+                serialNumber: serialNumber || "No UID",
+                records: message.records.map(r => ({
+                    recordType: r.recordType,
+                    mediaType: r.mediaType,
+                    id: r.id,
+                    encoding: r.encoding,
+                    lang: r.lang,
+                    // Save payload as Base64 for storage
+                    dataBase64: bufferToBase64(r.data),
+                    // Also store size
+                    byteLength: r.data ? r.data.byteLength : 0
+                }))
+            };
+
+            // 2. Save
+            historyData.unshift(scanEntry); // Add to top
+            localStorage.setItem('nfc_debug_history', JSON.stringify(historyData));
+            
+            // 3. Render "Live" View
+            renderLiveResult(scanEntry);
+            
+            // 4. Update History List in background
+            renderHistoryList();
+        }
+
+        // --- RENDERING ---
+
+        function renderLiveResult(entry) {
+            document.getElementById('scan-empty').classList.add('hidden');
+            const container = document.getElementById('latest-result');
+            const content = document.getElementById('latest-result-content');
+            
+            container.classList.remove('hidden');
+            // Re-use the card renderer
+            content.innerHTML = generateDetailHTML(entry, false);
+        }
+
+        function renderHistoryList() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = "";
+            
+            if (historyData.length === 0) {
+                list.innerHTML = `<div class="text-center text-slate-600 py-10 font-mono text-sm">No scans saved.</div>`;
                 return;
             }
 
-            try {
-                // Request Permission & Start Scan
-                ndef = new NDEFReader();
-                await ndef.scan();
+            historyData.forEach(entry => {
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const dateStr = date.toLocaleDateString();
                 
-                isScanning = true;
-                updateScanningUI(true);
-                hideError();
-
-                ndef.onreadingerror = () => {
-                    showError("Read error! Try holding the tag closer/steadier.");
-                    navigator.vibrate(200); // Error haptic
-                };
-
-                ndef.onreading = event => {
-                    handleRead(event);
-                };
-
-            } catch (error) {
-                isScanning = false;
-                updateScanningUI(false);
-                showError("Scan failed: " + error.message);
-            }
-        });
-
-        clearBtn.addEventListener('click', () => {
-            emptyState.classList.remove('hidden');
-            resultCard.classList.add('hidden');
-            clearBtn.classList.add('hidden');
-            recordsContainer.innerHTML = '';
-        });
-
-        function updateScanningUI(scanning) {
-            if (scanning) {
-                scanBtn.classList.add('animate-scan', 'bg-red-600', 'hover:bg-red-700');
-                scanBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                scanBtnText.innerText = "Stop Scanning";
-                scanBtn.innerHTML = `<i class="fa-solid fa-stop"></i> <span id="scan-btn-text">Stop Scanning</span>`;
-                connectionStatus.innerText = "Scanning...";
-                connectionStatus.classList.add('animate-pulse', 'text-yellow-200');
-            } else {
-                scanBtn.classList.remove('animate-scan', 'bg-red-600', 'hover:bg-red-700');
-                scanBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                scanBtn.innerHTML = `<i class="fa-solid fa-rss"></i> <span id="scan-btn-text">Start Scan</span>`;
-                connectionStatus.innerText = "Ready";
-                connectionStatus.classList.remove('animate-pulse', 'text-yellow-200');
-            }
-        }
-
-        function handleRead({ message, serialNumber }) {
-            // Haptic feedback for success
-            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-
-            // UI Updates
-            emptyState.classList.add('hidden');
-            resultCard.classList.remove('hidden');
-            clearBtn.classList.remove('hidden');
-            errorState.classList.add('hidden');
-
-            // Set Serial
-            tagUid.innerText = serialNumber || "Unknown UID";
-            recordCount.innerText = message.records.length;
-
-            // Clear previous records
-            recordsContainer.innerHTML = '';
-
-            // Process Records
-            if (message.records.length === 0) {
-                recordsContainer.innerHTML = `<div class="p-4 bg-slate-100 rounded text-center text-slate-500">Empty Tag (No NDEF Records)</div>`;
-            } else {
-                message.records.forEach((record, index) => {
-                    const card = createRecordCard(record, index);
-                    recordsContainer.appendChild(card);
-                });
-            }
-        }
-
-        function createRecordCard(record, index) {
-            const wrapper = document.createElement('div');
-            wrapper.className = "bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow";
-
-            let icon = "fa-file";
-            let typeLabel = record.recordType;
-            let contentHtml = "";
-            let metaHtml = "";
-
-            const decoder = new TextDecoder();
-
-            // --- Record Type Logic ---
-            
-            // 1. TEXT
-            if (record.recordType === "text") {
-                icon = "fa-align-left";
-                const text = decoder.decode(record.data);
-                const lang = record.lang || "en";
-                contentHtml = `<p class="text-slate-800 font-medium break-words">${escapeHtml(text)}</p>`;
-                metaHtml = `<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded">Language: ${lang}</span>`;
-            } 
-            // 2. URL
-            else if (record.recordType === "url") {
-                icon = "fa-link";
-                const url = decoder.decode(record.data);
-                contentHtml = `<a href="${url}" target="_blank" class="text-blue-600 underline break-all font-medium">${url}</a>`;
-            }
-            // 3. MIME (JSON, etc)
-            else if (record.recordType === "mime") {
-                icon = "fa-code";
-                typeLabel = record.mediaType; // e.g. application/json
+                const item = document.createElement('div');
+                item.className = "bg-slate-900 border border-slate-800 rounded-lg p-4 hover:bg-slate-800 cursor-pointer transition-colors group";
+                item.onclick = () => openModal(entry.id);
                 
-                if (record.mediaType === "application/json") {
-                    try {
-                        const jsonText = decoder.decode(record.data);
-                        const jsonObj = JSON.parse(jsonText);
-                        contentHtml = `<pre class="bg-slate-900 text-green-400 p-3 rounded-lg text-xs overflow-x-auto font-mono mt-2">${JSON.stringify(jsonObj, null, 2)}</pre>`;
-                    } catch (e) {
-                        contentHtml = `<p class="text-red-500 text-sm">Invalid JSON Data</p>`;
-                    }
-                } else if (record.mediaType.startsWith('image/')) {
-                    icon = "fa-image";
-                    // Attempt to show image if small enough, otherwise generic
-                    contentHtml = `<p class="text-slate-500 italic">Binary Image Data (${record.data.byteLength} bytes)</p>`;
-                } else {
-                    const text = decoder.decode(record.data);
-                    contentHtml = `<p class="font-mono text-xs text-slate-600 bg-slate-50 p-2 rounded break-all">${escapeHtml(text)}</p>`;
-                }
-            }
-            // 4. Fallback / Unknown
-            else {
-                icon = "fa-cube";
-                contentHtml = `<p class="text-slate-500 italic text-sm">Raw binary data (${record.data.byteLength} bytes)</p>`;
-            }
-
-            // --- Construct HTML ---
-            wrapper.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <div class="bg-slate-100 p-2 rounded-lg text-slate-500 shrink-0">
-                        <i class="fa-solid ${icon} text-lg w-6 h-6 flex items-center justify-center"></i>
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-green-400 font-mono font-bold text-sm">${entry.serialNumber}</span>
+                                <span class="text-[10px] text-slate-500 bg-slate-950 px-1.5 rounded">${entry.records.length} Records</span>
+                            </div>
+                            <div class="text-xs text-slate-500 font-mono">${dateStr} ${timeStr}</div>
+                        </div>
+                        <div class="text-slate-600 group-hover:text-blue-400 transition-colors">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </div>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-start mb-1">
-                            <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Record #${index + 1} • ${typeLabel}</span>
-                            ${record.encoding ? `<span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 rounded">${record.encoding}</span>` : ''}
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function generateDetailHTML(entry) {
+            const date = new Date(entry.timestamp).toLocaleString();
+            
+            let html = `
+                <!-- Meta Card -->
+                <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">UID (Serial)</p>
+                            <p class="font-mono text-green-400 text-lg select-all">${entry.serialNumber}</p>
                         </div>
-                        <div class="mt-1">
-                            ${contentHtml}
-                        </div>
-                        <div class="mt-2 flex gap-2">
-                            ${metaHtml}
+                        <div class="text-right">
+                            <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">Captured</p>
+                            <p class="font-mono text-slate-300 text-xs">${date}</p>
                         </div>
                     </div>
                 </div>
             `;
-            return wrapper;
+
+            // Records Loop
+            if (entry.records.length === 0) {
+                html += `<div class="p-4 border-2 border-dashed border-slate-800 rounded-xl text-center text-slate-500">No NDEF Records Found</div>`;
+            } else {
+                entry.records.forEach((rec, idx) => {
+                    // Restore DataView for processing
+                    const dataView = base64ToBuffer(rec.dataBase64);
+                    const hex = bufferToHex(dataView);
+                    const ascii = bufferToAscii(dataView);
+                    
+                    // Decode text payload if recordType is text
+                    let decodedText = null;
+                    if(rec.recordType === 'text') {
+                        try { const decoder = new TextDecoder(); decodedText = decoder.decode(dataView); } catch(e){}
+                    }
+                    if(rec.recordType === 'url') {
+                        try { const decoder = new TextDecoder(); decodedText = decoder.decode(dataView); } catch(e){}
+                    }
+
+                    html += `
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden mb-4 shadow-sm">
+                            <!-- Record Header -->
+                            <div class="bg-slate-800/50 p-3 border-b border-slate-800 flex justify-between items-center">
+                                <span class="font-bold text-xs text-blue-400 uppercase tracking-wider">Record #${idx+1} : ${rec.recordType}</span>
+                                <span class="text-[10px] text-slate-500 font-mono">${rec.byteLength} Bytes</span>
+                            </div>
+                            
+                            <!-- Properties -->
+                            <div class="p-3 grid grid-cols-2 gap-y-2 gap-x-4 text-xs font-mono text-slate-400 border-b border-slate-800/50">
+                                ${rec.mediaType ? `<div><span class="text-slate-600">MIME:</span> <span class="text-slate-300">${rec.mediaType}</span></div>` : ''}
+                                ${rec.encoding ? `<div><span class="text-slate-600">Enc:</span> <span class="text-slate-300">${rec.encoding}</span></div>` : ''}
+                                ${rec.lang ? `<div><span class="text-slate-600">Lang:</span> <span class="text-slate-300">${rec.lang}</span></div>` : ''}
+                                ${rec.id ? `<div><span class="text-slate-600">ID:</span> <span class="text-slate-300">${rec.id}</span></div>` : ''}
+                            </div>
+
+                            ${decodedText ? `
+                            <div class="p-3 bg-blue-900/10 border-b border-blue-900/20">
+                                <p class="text-[10px] uppercase text-blue-500 font-bold mb-1">Decoded Payload</p>
+                                <p class="text-sm text-blue-100 break-words font-medium">${decodedText}</p>
+                            </div>
+                            ` : ''}
+
+                            <!-- Hex Dump -->
+                            <div class="p-3">
+                                <p class="text-[10px] uppercase text-slate-600 font-bold mb-1">Hex Dump</p>
+                                <div class="font-mono text-xs text-slate-400 bg-black/30 p-2 rounded break-all tracking-wider leading-relaxed select-all border border-slate-800">
+                                    ${hex}
+                                </div>
+                            </div>
+                            
+                            <!-- ASCII Dump -->
+                            <div class="p-3 pt-0">
+                                <p class="text-[10px] uppercase text-slate-600 font-bold mb-1">ASCII View</p>
+                                <div class="font-mono text-xs text-slate-500 bg-black/30 p-2 rounded break-all tracking-widest select-all border border-slate-800">
+                                    ${ascii}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            return html;
         }
 
-        function showError(msg) {
-            errorState.classList.remove('hidden');
-            errorMessage.innerText = msg;
-            emptyState.classList.add('hidden');
+        // --- MODAL LOGIC ---
+
+        function openModal(id) {
+            currentViewingId = id;
+            const entry = historyData.find(e => e.id === id);
+            if (!entry) return;
+
+            const modal = document.getElementById('detail-modal');
+            const content = document.getElementById('modal-content');
+            
+            content.innerHTML = generateDetailHTML(entry);
+            modal.classList.remove('translate-y-full');
         }
 
-        function hideError() {
-            errorState.classList.add('hidden');
+        function closeModal() {
+            document.getElementById('detail-modal').classList.add('translate-y-full');
+            currentViewingId = null;
         }
 
-        function resetUI() {
-            updateScanningUI(false);
-            if(recordsContainer.children.length === 0) {
-                 emptyState.classList.remove('hidden');
+        function deleteCurrentLog() {
+            if(!confirm("Delete this log permanently?")) return;
+            historyData = historyData.filter(h => h.id !== currentViewingId);
+            localStorage.setItem('nfc_debug_history', JSON.stringify(historyData));
+            closeModal();
+            renderHistoryList();
+        }
+
+        function copyCurrentJSON() {
+            const entry = historyData.find(e => e.id === currentViewingId);
+            if(!entry) return;
+            // Clean up for export (optional, but good)
+            const exportData = JSON.stringify(entry, null, 2);
+            navigator.clipboard.writeText(exportData).then(() => {
+                alert("Raw JSON copied to clipboard");
+            });
+        }
+
+        // --- HISTORY MANAGEMENT ---
+
+        function clearAllHistory() {
+            if(!confirm("Clear ALL history? This cannot be undone.")) return;
+            historyData = [];
+            localStorage.removeItem('nfc_debug_history');
+            renderHistoryList();
+        }
+
+        // --- TAB SWITCHING ---
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + tabName).classList.add('active');
+            
+            // UI Updates
+            const scanTabBtn = document.getElementById('tab-scan');
+            const histTabBtn = document.getElementById('tab-history');
+
+            if(tabName === 'scan') {
+                scanTabBtn.classList.replace('border-transparent', 'border-blue-500');
+                scanTabBtn.classList.replace('text-slate-500', 'text-blue-400');
+                histTabBtn.classList.replace('border-blue-500', 'border-transparent');
+                histTabBtn.classList.replace('text-blue-400', 'text-slate-500');
+            } else {
+                renderHistoryList();
+                histTabBtn.classList.replace('border-transparent', 'border-blue-500');
+                histTabBtn.classList.replace('text-slate-500', 'text-blue-400');
+                scanTabBtn.classList.replace('border-blue-500', 'border-transparent');
+                scanTabBtn.classList.replace('text-blue-400', 'text-slate-500');
             }
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        // --- INITIALIZATION ---
+        
+        document.getElementById('btn-scan').addEventListener('click', toggleScan);
+
+        // PWA Service Worker (Persistence)
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', e => self.skipWaiting());
+                self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+            `;
+            const swBlob = new Blob([swCode], {type: 'application/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(swBlob));
         }
 
-        // Auto-register SW on load
-        window.addEventListener('load', () => {
-            // Prevent display sleep check could go here using WakeLock API if needed for long sessions
-        });
+        // Create Manifest
+        const manifest = {
+            "name": "NFC Debugger",
+            "short_name": "NFC Debug",
+            "start_url": "./",
+            "display": "standalone",
+            "background_color": "#0f172a",
+            "theme_color": "#0f172a",
+            "icons": [{"src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/svgs/solid/bug.svg", "sizes": "192x192", "type": "image/svg+xml"}]
+        };
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type: 'application/json'}));
+        document.head.appendChild(link);
 
     </script>
 </body>
