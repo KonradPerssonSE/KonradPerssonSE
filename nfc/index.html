@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NFC Tag Validator</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Meta for PWA -->
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Icons using FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        /* Custom Scrollbar for records */
+        .records-scroll::-webkit-scrollbar { width: 4px; }
+        .records-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .records-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        /* Pulse animation for scanning state */
+        @keyframes scan-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(37, 99, 235, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+        }
+        .animate-scan { animation: scan-pulse 2s infinite; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 h-screen flex flex-col overflow-hidden">
+
+    <!-- App Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-lg shrink-0 z-10">
+        <div class="flex justify-between items-center max-w-2xl mx-auto">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-nfc-symbol"></i> Validator
+            </h1>
+            <div id="connection-status" class="text-xs font-mono bg-blue-700 px-2 py-1 rounded">
+                Ready
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 pb-24 max-w-2xl mx-auto w-full">
+        
+        <!-- Welcome / Empty State -->
+        <div id="empty-state" class="flex flex-col items-center justify-center h-full text-center text-slate-400">
+            <i class="fa-solid fa-mobile-screen-button text-6xl mb-4 text-slate-200"></i>
+            <p class="text-lg font-medium text-slate-500">Tap "Start Scan" to read a tag</p>
+            <p class="text-sm mt-2">Make sure NFC is enabled on your device.</p>
+        </div>
+
+        <!-- Tag Result Card (Hidden by default) -->
+        <div id="result-card" class="hidden space-y-4">
+            
+            <!-- Meta Info -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-10">
+                    <i class="fa-solid fa-wifi text-6xl"></i>
+                </div>
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Tag Serial Number (UID)</h2>
+                <div id="tag-uid" class="text-2xl font-mono font-bold text-blue-600 tracking-wide">
+                    --
+                </div>
+                <div class="mt-4 flex gap-4 text-sm text-slate-500">
+                    <div>
+                        <span class="block text-xs font-bold text-slate-400 uppercase">Records</span>
+                        <span id="record-count" class="font-semibold text-slate-700">0</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs font-bold text-slate-400 uppercase">Status</span>
+                        <span class="font-semibold text-green-600 flex items-center gap-1">
+                            <i class="fa-solid fa-check-circle"></i> Readable
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Records List -->
+            <div class="space-y-3">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Data Records</h3>
+                <div id="records-container" class="space-y-3">
+                    <!-- Records injected here by JS -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Error State (Hidden by default) -->
+        <div id="error-state" class="hidden bg-red-50 border border-red-100 rounded-xl p-4 mt-4">
+            <div class="flex items-start gap-3">
+                <i class="fa-solid fa-triangle-exclamation text-red-500 mt-1"></i>
+                <div>
+                    <h3 class="font-bold text-red-700">Scan Error</h3>
+                    <p id="error-message" class="text-sm text-red-600 mt-1">Unknown error occurred.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Floating Action Button Area -->
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 to-transparent z-20">
+        <div class="max-w-2xl mx-auto flex gap-3">
+            <button id="scan-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-blue-200 flex items-center justify-center gap-3 text-lg">
+                <i class="fa-solid fa-rss"></i>
+                <span id="scan-btn-text">Start Scan</span>
+            </button>
+            <button id="clear-btn" class="bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all font-bold p-4 rounded-2xl shadow-lg shadow-slate-100 hidden">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // --- 1. PWA Setup (Manifest & Service Worker) ---
+        
+        // Dynamically create Manifest
+        const manifest = {
+            "name": "NFC Validator",
+            "short_name": "NFC Check",
+            "start_url": "./",
+            "display": "standalone",
+            "background_color": "#F8FAFC",
+            "theme_color": "#2563EB",
+            "icons": [{
+                "src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/svgs/solid/nfc-symbol.svg", 
+                "sizes": "192x192", 
+                "type": "image/svg+xml"
+            }]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = manifestURL;
+        document.head.appendChild(link);
+
+        // Service Worker for Offline capability
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = 'nfc-validator-v1';
+                self.addEventListener('install', e => self.skipWaiting());
+                self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+                self.addEventListener('fetch', e => {
+                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+                });
+            `;
+            const swBlob = new Blob([swCode], {type: 'application/javascript'});
+            const swUrl = URL.createObjectURL(swBlob);
+            navigator.serviceWorker.register(swUrl)
+                .then(() => console.log('SW Registered'))
+                .catch(console.error);
+        }
+
+        // --- 2. Application Logic ---
+
+        const scanBtn = document.getElementById('scan-btn');
+        const scanBtnText = document.getElementById('scan-btn-text');
+        const clearBtn = document.getElementById('clear-btn');
+        const emptyState = document.getElementById('empty-state');
+        const resultCard = document.getElementById('result-card');
+        const recordsContainer = document.getElementById('records-container');
+        const errorState = document.getElementById('error-state');
+        const errorMessage = document.getElementById('error-message');
+        const tagUid = document.getElementById('tag-uid');
+        const recordCount = document.getElementById('record-count');
+        const connectionStatus = document.getElementById('connection-status');
+
+        let ndef;
+        let isScanning = false;
+        const abortController = new AbortController();
+
+        // Feature Detection
+        if (!("NDEFReader" in window)) {
+            showError("Web NFC is not supported on this device or browser. Please use Chrome on Android.");
+            scanBtn.disabled = true;
+            scanBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            scanBtnText.innerText = "NFC Not Supported";
+        }
+
+        scanBtn.addEventListener('click', async () => {
+            if (isScanning) {
+                // Stop Scanning
+                abortController.abort();
+                isScanning = false;
+                resetUI();
+                return;
+            }
+
+            try {
+                // Request Permission & Start Scan
+                ndef = new NDEFReader();
+                await ndef.scan();
+                
+                isScanning = true;
+                updateScanningUI(true);
+                hideError();
+
+                ndef.onreadingerror = () => {
+                    showError("Read error! Try holding the tag closer/steadier.");
+                    navigator.vibrate(200); // Error haptic
+                };
+
+                ndef.onreading = event => {
+                    handleRead(event);
+                };
+
+            } catch (error) {
+                isScanning = false;
+                updateScanningUI(false);
+                showError("Scan failed: " + error.message);
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            emptyState.classList.remove('hidden');
+            resultCard.classList.add('hidden');
+            clearBtn.classList.add('hidden');
+            recordsContainer.innerHTML = '';
+        });
+
+        function updateScanningUI(scanning) {
+            if (scanning) {
+                scanBtn.classList.add('animate-scan', 'bg-red-600', 'hover:bg-red-700');
+                scanBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                scanBtnText.innerText = "Stop Scanning";
+                scanBtn.innerHTML = `<i class="fa-solid fa-stop"></i> <span id="scan-btn-text">Stop Scanning</span>`;
+                connectionStatus.innerText = "Scanning...";
+                connectionStatus.classList.add('animate-pulse', 'text-yellow-200');
+            } else {
+                scanBtn.classList.remove('animate-scan', 'bg-red-600', 'hover:bg-red-700');
+                scanBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                scanBtn.innerHTML = `<i class="fa-solid fa-rss"></i> <span id="scan-btn-text">Start Scan</span>`;
+                connectionStatus.innerText = "Ready";
+                connectionStatus.classList.remove('animate-pulse', 'text-yellow-200');
+            }
+        }
+
+        function handleRead({ message, serialNumber }) {
+            // Haptic feedback for success
+            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+
+            // UI Updates
+            emptyState.classList.add('hidden');
+            resultCard.classList.remove('hidden');
+            clearBtn.classList.remove('hidden');
+            errorState.classList.add('hidden');
+
+            // Set Serial
+            tagUid.innerText = serialNumber || "Unknown UID";
+            recordCount.innerText = message.records.length;
+
+            // Clear previous records
+            recordsContainer.innerHTML = '';
+
+            // Process Records
+            if (message.records.length === 0) {
+                recordsContainer.innerHTML = `<div class="p-4 bg-slate-100 rounded text-center text-slate-500">Empty Tag (No NDEF Records)</div>`;
+            } else {
+                message.records.forEach((record, index) => {
+                    const card = createRecordCard(record, index);
+                    recordsContainer.appendChild(card);
+                });
+            }
+        }
+
+        function createRecordCard(record, index) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow";
+
+            let icon = "fa-file";
+            let typeLabel = record.recordType;
+            let contentHtml = "";
+            let metaHtml = "";
+
+            const decoder = new TextDecoder();
+
+            // --- Record Type Logic ---
+            
+            // 1. TEXT
+            if (record.recordType === "text") {
+                icon = "fa-align-left";
+                const text = decoder.decode(record.data);
+                const lang = record.lang || "en";
+                contentHtml = `<p class="text-slate-800 font-medium break-words">${escapeHtml(text)}</p>`;
+                metaHtml = `<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded">Language: ${lang}</span>`;
+            } 
+            // 2. URL
+            else if (record.recordType === "url") {
+                icon = "fa-link";
+                const url = decoder.decode(record.data);
+                contentHtml = `<a href="${url}" target="_blank" class="text-blue-600 underline break-all font-medium">${url}</a>`;
+            }
+            // 3. MIME (JSON, etc)
+            else if (record.recordType === "mime") {
+                icon = "fa-code";
+                typeLabel = record.mediaType; // e.g. application/json
+                
+                if (record.mediaType === "application/json") {
+                    try {
+                        const jsonText = decoder.decode(record.data);
+                        const jsonObj = JSON.parse(jsonText);
+                        contentHtml = `<pre class="bg-slate-900 text-green-400 p-3 rounded-lg text-xs overflow-x-auto font-mono mt-2">${JSON.stringify(jsonObj, null, 2)}</pre>`;
+                    } catch (e) {
+                        contentHtml = `<p class="text-red-500 text-sm">Invalid JSON Data</p>`;
+                    }
+                } else if (record.mediaType.startsWith('image/')) {
+                    icon = "fa-image";
+                    // Attempt to show image if small enough, otherwise generic
+                    contentHtml = `<p class="text-slate-500 italic">Binary Image Data (${record.data.byteLength} bytes)</p>`;
+                } else {
+                    const text = decoder.decode(record.data);
+                    contentHtml = `<p class="font-mono text-xs text-slate-600 bg-slate-50 p-2 rounded break-all">${escapeHtml(text)}</p>`;
+                }
+            }
+            // 4. Fallback / Unknown
+            else {
+                icon = "fa-cube";
+                contentHtml = `<p class="text-slate-500 italic text-sm">Raw binary data (${record.data.byteLength} bytes)</p>`;
+            }
+
+            // --- Construct HTML ---
+            wrapper.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="bg-slate-100 p-2 rounded-lg text-slate-500 shrink-0">
+                        <i class="fa-solid ${icon} text-lg w-6 h-6 flex items-center justify-center"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Record #${index + 1} • ${typeLabel}</span>
+                            ${record.encoding ? `<span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 rounded">${record.encoding}</span>` : ''}
+                        </div>
+                        <div class="mt-1">
+                            ${contentHtml}
+                        </div>
+                        <div class="mt-2 flex gap-2">
+                            ${metaHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            return wrapper;
+        }
+
+        function showError(msg) {
+            errorState.classList.remove('hidden');
+            errorMessage.innerText = msg;
+            emptyState.classList.add('hidden');
+        }
+
+        function hideError() {
+            errorState.classList.add('hidden');
+        }
+
+        function resetUI() {
+            updateScanningUI(false);
+            if(recordsContainer.children.length === 0) {
+                 emptyState.classList.remove('hidden');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Auto-register SW on load
+        window.addEventListener('load', () => {
+            // Prevent display sleep check could go here using WakeLock API if needed for long sessions
+        });
+
+    </script>
+</body>
+</html>
