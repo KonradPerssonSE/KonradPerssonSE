@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFC Debugger Pro</title>
+    <title>NFC Sentinel</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,515 +11,368 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Google Fonts (JetBrains Mono for code) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
     <!-- PWA Settings -->
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e5e5; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-
-        /* Animation for Scan Pulse */
-        @keyframes radar {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        /* CRT Scanline Effect */
+        .scanline {
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 50; opacity: 0.15;
         }
-        .scanning-active { animation: radar 2s infinite; }
+
+        /* Utility Classes */
+        .btn-action { @apply flex items-center justify-center gap-2 font-bold py-4 rounded-xl transition-all active:scale-95 shadow-lg border; }
         
-        /* Tab Transitions */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.2s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* Animations */
+        @keyframes flash-red { 0%, 100% { background-color: transparent; } 50% { background-color: rgba(220, 38, 38, 0.2); } }
+        .flash-error { animation: flash-red 0.5s ease-in-out; }
+        @keyframes flash-green { 0%, 100% { background-color: transparent; } 50% { background-color: rgba(22, 163, 74, 0.2); } }
+        .flash-success { animation: flash-green 0.5s ease-in-out; }
+
+        /* Loader */
+        .loader { width: 48px; height: 48px; border: 5px solid #333; border-bottom-color: #22c55e; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden selection:bg-green-900 selection:text-green-100">
+
+    <div class="scanline"></div>
 
     <!-- Header -->
-    <header class="bg-slate-900 border-b border-slate-800 p-4 shrink-0 z-20">
-        <div class="flex justify-between items-center max-w-3xl mx-auto">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold">
-                    <i class="fa-solid fa-bug"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-white text-lg leading-tight">NFC Debugger</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">V2.0 // RAW DATA MODE</p>
-                </div>
-            </div>
-            <div id="status-indicator" class="text-xs font-mono px-2 py-1 rounded bg-slate-800 text-slate-400">
-                IDLE
-            </div>
+    <header class="bg-black border-b border-gray-900 p-4 shrink-0 z-20 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-shield-halved text-green-500 text-xl"></i>
+            <h1 class="font-bold text-lg tracking-tight">NFC SENTINEL <span class="text-xs text-gray-600 font-mono ml-2">V3.1 WRITE OPS</span></h1>
         </div>
+        <button onclick="clearLogs()" class="text-gray-600 hover:text-red-500 transition-colors">
+            <i class="fa-solid fa-trash"></i>
+        </button>
     </header>
 
-    <!-- Navigation Tabs -->
-    <nav class="bg-slate-900 border-b border-slate-800 shrink-0">
-        <div class="flex max-w-3xl mx-auto">
-            <button onclick="switchTab('scan')" id="tab-scan" class="flex-1 py-3 text-sm font-semibold border-b-2 border-blue-500 text-blue-400 transition-colors">
-                <i class="fa-solid fa-satellite-dish mr-2"></i>Scanner
-            </button>
-            <button onclick="switchTab('history')" id="tab-history" class="flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition-colors">
-                <i class="fa-solid fa-clock-rotate-left mr-2"></i>History
-            </button>
+    <!-- Main Workspace -->
+    <main class="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full flex flex-col gap-6 relative z-10">
+
+        <!-- STATUS PANEL -->
+        <div id="status-panel" class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 text-center backdrop-blur-sm">
+            <div id="status-icon" class="text-4xl mb-3 text-gray-600 transition-colors">
+                <i class="fa-solid fa-nfc-symbol"></i>
+            </div>
+            <h2 id="status-text" class="text-xl font-bold text-white mb-1">Ready to Scan</h2>
+            <p id="status-sub" class="text-sm text-gray-500 font-mono">Waiting for interaction...</p>
         </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto relative bg-slate-950">
-        
-        <!-- SCAN TAB -->
-        <div id="view-scan" class="tab-content active h-full">
-            <div class="max-w-3xl mx-auto p-4 min-h-full flex flex-col">
-                
-                <!-- Action Area -->
-                <div class="mb-6 bg-slate-900 rounded-xl p-6 border border-slate-800 shadow-xl text-center">
-                    <button id="btn-scan" class="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 text-slate-400 text-3xl flex items-center justify-center mx-auto mb-4 transition-all active:scale-95 shadow-lg">
-                        <i class="fa-solid fa-power-off"></i>
-                    </button>
-                    <h2 id="scan-status-text" class="text-xl font-bold text-white mb-1">Tap to Start</h2>
-                    <p class="text-xs text-slate-500">Enable NFC in Android Settings</p>
-                </div>
-
-                <!-- Latest Result Container -->
-                <div id="latest-result" class="hidden flex-1">
-                    <div class="flex justify-between items-end mb-2">
-                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Latest Capture</h3>
-                        <span class="text-[10px] bg-green-900 text-green-300 px-2 py-0.5 rounded font-mono">LIVE</span>
-                    </div>
-                    <div id="latest-result-content"></div>
-                </div>
-
-                <!-- Empty State for Scan -->
-                <div id="scan-empty" class="flex-1 flex flex-col items-center justify-center text-slate-700 opacity-50">
-                    <i class="fa-brands fa-usb text-6xl mb-4"></i>
-                    <p class="font-mono text-sm">Waiting for tag data stream...</p>
-                </div>
+        <!-- 1. BACKUP SECTION (The "Golden Master") -->
+        <div class="space-y-2">
+            <div class="flex justify-between items-end">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-floppy-disk mr-2"></i>Option 1: Backup</h3>
+                <span id="backup-badge" class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-mono">NO BACKUP</span>
+            </div>
+            
+            <button id="btn-backup" onclick="performBackup()" class="w-full btn-action bg-blue-600/10 border-blue-600/30 text-blue-400 hover:bg-blue-600/20">
+                <i class="fa-solid fa-download"></i> READ & BACKUP TAG
+            </button>
+            
+            <!-- Hidden Backup Visualizer -->
+            <div id="backup-card" class="hidden bg-gray-900 border border-gray-800 rounded-lg p-3 text-xs font-mono text-gray-400 break-all">
+                <!-- Backup content injected here -->
             </div>
         </div>
 
-        <!-- HISTORY TAB -->
-        <div id="view-history" class="tab-content h-full">
-            <div class="max-w-3xl mx-auto p-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Saved Logs</h3>
-                    <button onclick="clearAllHistory()" class="text-xs text-red-400 hover:text-red-300 border border-red-900 bg-red-900/20 px-3 py-1 rounded transition-colors">
-                        <i class="fa-solid fa-trash mr-1"></i> Clear All
-                    </button>
-                </div>
-                <div id="history-list" class="space-y-3 pb-20">
-                    <!-- History Items Injected Here -->
-                </div>
+        <!-- 2. EMULATE (Not Supported) -->
+         <div class="space-y-2 opacity-75">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-tower-broadcast mr-2"></i>Option 2: Emulate</h3>
+            <button onclick="showEmulateInfo()" class="w-full btn-action bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700">
+                <i class="fa-solid fa-mobile-screen-button"></i> ACT LIKE TAG
+            </button>
+        </div>
+
+        <!-- 3. DESTRUCTIVE TEST (Fill) -->
+        <div class="space-y-2">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-flask mr-2"></i>Option 3: Fill (Test Writable)</h3>
+            <button id="btn-fill" onclick="performFillTest()" class="w-full btn-action bg-yellow-600/10 border-yellow-600/30 text-yellow-500 hover:bg-yellow-600/20">
+                <i class="fa-solid fa-pen-to-square"></i> FILL DUMMY DATA
+            </button>
+        </div>
+
+        <!-- 4. RESTORE -->
+        <div class="space-y-2">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-rotate-left mr-2"></i>Option 4: Restore</h3>
+            <button id="btn-restore" onclick="performRestore()" disabled class="w-full btn-action bg-green-600/10 border-green-600/30 text-green-500 hover:bg-green-600/20 disabled:opacity-30 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-upload"></i> RESTORE FROM BACKUP
+            </button>
+        </div>
+
+        <!-- LOG CONSOLE -->
+        <div class="mt-4 border-t border-gray-800 pt-4">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Console Output</h3>
+            <div id="console-log" class="h-40 overflow-y-auto bg-black border border-gray-800 rounded-lg p-3 font-mono text-xs text-gray-400 space-y-1">
+                <div class="text-gray-600">> System Initialized.</div>
             </div>
         </div>
 
     </main>
 
-    <!-- Detail Modal (Overlay) -->
-    <div id="detail-modal" class="fixed inset-0 bg-slate-950 z-50 transform translate-y-full transition-transform duration-300 flex flex-col">
-        <!-- Modal Header -->
-        <div class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shrink-0">
-            <h2 class="font-bold text-white">Scan Details</h2>
-            <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        
-        <!-- Modal Content -->
-        <div id="modal-content" class="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full">
-            <!-- Details Injected Here -->
-        </div>
+    <!-- Overlay for interactions -->
+    <div id="overlay" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-6 text-center">
+        <div class="loader mb-6"></div>
+        <h2 id="overlay-title" class="text-2xl font-bold text-white mb-2">Ready to Scan</h2>
+        <p id="overlay-desc" class="text-gray-400 max-w-xs mx-auto">Hold your device near the NFC tag now.</p>
+        <button onclick="cancelOverlay()" class="mt-8 px-6 py-2 rounded-full border border-gray-600 text-gray-400 hover:text-white transition-colors">
+            CANCEL
+        </button>
+    </div>
 
-        <!-- Modal Footer -->
-        <div class="p-4 bg-slate-900 border-t border-slate-800 shrink-0 flex gap-3">
-             <button onclick="copyCurrentJSON()" class="flex-1 bg-slate-800 text-slate-300 py-3 rounded-lg font-mono text-xs font-bold hover:bg-slate-700">
-                <i class="fa-solid fa-copy mr-2"></i>COPY JSON
-            </button>
-            <button onclick="deleteCurrentLog()" class="flex-1 bg-red-900/30 text-red-400 border border-red-900/50 py-3 rounded-lg font-mono text-xs font-bold hover:bg-red-900/50">
-                DELETE LOG
+    <!-- Info Modal -->
+    <div id="info-modal" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-6">
+        <div class="bg-gray-900 border border-gray-700 p-6 rounded-2xl max-w-sm w-full">
+            <h3 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i>Web NFC Limitation</h3>
+            <p class="text-gray-400 text-sm mb-4 leading-relaxed">
+                <strong>Host Card Emulation (HCE)</strong> is not supported by web browsers. Your phone cannot "act like a tag" to other readers via a website.
+                <br><br>
+                <strong>Alternative:</strong> Use the <strong>Restore</strong> function to clone your backup onto a blank physical tag.
+            </p>
+            <button onclick="document.getElementById('info-modal').classList.add('hidden')" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">
+                UNDERSTOOD
             </button>
         </div>
     </div>
 
     <script>
-        // --- DATA UTILITIES (The Brains) ---
+        // --- STATE ---
+        let currentBackup = null; // Holds the NDEFMessage object + Serial
+        let activeController = null;
+        const consoleEl = document.getElementById('console-log');
 
-        // Convert DataView to Hex String (00 AF 12 ...)
-        function bufferToHex(dataView) {
-            if (!dataView) return "NULL";
-            const arr = new Uint8Array(dataView.buffer);
-            return Array.from(arr)
-                .map(b => b.toString(16).padStart(2, '0').toUpperCase())
-                .join(' ');
+        // --- UTILS ---
+        function log(msg, type = 'info') {
+            const line = document.createElement('div');
+            const ts = new Date().toLocaleTimeString('en-US', {hour12:false});
+            line.innerHTML = `<span class="text-gray-600">[${ts}]</span> ${msg}`;
+            if(type === 'error') line.classList.add('text-red-400');
+            if(type === 'success') line.classList.add('text-green-400');
+            if(type === 'warn') line.classList.add('text-yellow-400');
+            consoleEl.prepend(line);
         }
 
-        // Convert DataView to ASCII string (sanitized)
-        function bufferToAscii(dataView) {
-            if (!dataView) return "";
-            const arr = new Uint8Array(dataView.buffer);
-            let str = "";
-            for (let i = 0; i < arr.length; i++) {
-                const char = arr[i];
-                // Only printable ASCII
-                str += (char > 31 && char < 127) ? String.fromCharCode(char) : '.';
+        function clearLogs() {
+            consoleEl.innerHTML = '<div class="text-gray-600">> Console Cleared.</div>';
+        }
+
+        function showOverlay(title, desc) {
+            document.getElementById('overlay').classList.remove('hidden');
+            document.getElementById('overlay-title').innerText = title;
+            document.getElementById('overlay-desc').innerText = desc;
+        }
+
+        function hideOverlay() {
+            document.getElementById('overlay').classList.add('hidden');
+        }
+
+        function cancelOverlay() {
+            if (activeController) {
+                activeController.abort();
+                activeController = null;
             }
-            return str;
+            hideOverlay();
+            log("Operation cancelled by user.", 'warn');
         }
 
-        // Convert DataView to Base64 (for storage)
-        function bufferToBase64(dataView) {
-            if(!dataView) return "";
+        // --- BASE64 HELPERS (For Backup Storage) ---
+        function bufferToBase64(buffer) {
             let binary = '';
-            const bytes = new Uint8Array(dataView.buffer);
-            const len = bytes.byteLength;
-            for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
             return window.btoa(binary);
         }
 
-        // Base64 to ArrayBuffer (for retrieval)
         function base64ToBuffer(base64) {
             const binary_string = window.atob(base64);
             const len = binary_string.length;
             const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binary_string.charCodeAt(i);
-            }
-            return new DataView(bytes.buffer);
+            for (let i = 0; i < len; i++) bytes[i] = binary_string.charCodeAt(i);
+            return bytes.buffer;
         }
 
-        // --- APP STATE ---
+        // --- 1. BACKUP FUNCTION ---
+        async function performBackup() {
+            if (!('NDEFReader' in window)) return alert("Web NFC not supported");
+            
+            showOverlay("Reading Tag", "Hold tag to back of phone to save state.");
+            activeController = new AbortController();
 
-        let ndefReader;
-        let isScanning = false;
-        let abortController = new AbortController();
-        let historyData = JSON.parse(localStorage.getItem('nfc_debug_history') || '[]');
-        let currentViewingId = null;
+            try {
+                const ndef = new NDEFReader();
+                await ndef.scan({ signal: activeController.signal });
 
-        // --- CORE FUNCTIONS ---
+                ndef.onreading = ({ message, serialNumber }) => {
+                    // 1. Serialize Records
+                    const serializableRecords = message.records.map(r => ({
+                        recordType: r.recordType,
+                        mediaType: r.mediaType,
+                        id: r.id,
+                        encoding: r.encoding,
+                        lang: r.lang,
+                        data: r.data ? bufferToBase64(r.data.buffer) : null
+                    }));
 
-        async function toggleScan() {
-            const btn = document.getElementById('btn-scan');
-            const statusText = document.getElementById('scan-status-text');
-            const statusInd = document.getElementById('status-indicator');
+                    // 2. Save to State & LocalStorage
+                    currentBackup = {
+                        serialNumber: serialNumber,
+                        timestamp: new Date().toISOString(),
+                        records: serializableRecords
+                    };
+                    
+                    localStorage.setItem('nfc_sentinel_backup', JSON.stringify(currentBackup));
 
-            if (isScanning) {
-                // Stop
-                abortController.abort();
-                isScanning = false;
-                btn.classList.remove('scanning-active', 'bg-green-600', 'border-green-400', 'text-white');
-                btn.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-400');
-                btn.innerHTML = '<i class="fa-solid fa-power-off"></i>';
-                statusText.innerText = "Scan Stopped";
-                statusInd.innerText = "IDLE";
-                statusInd.className = "text-xs font-mono px-2 py-1 rounded bg-slate-800 text-slate-400";
-            } else {
-                // Start
-                if (!('NDEFReader' in window)) {
-                    alert("Web NFC not supported on this device.");
-                    return;
+                    // 3. UI Update
+                    updateBackupUI();
+                    log(`Backup successful. UID: ${serialNumber}`, 'success');
+                    
+                    // Stop scanning immediately after one read
+                    activeController.abort();
+                    hideOverlay();
+                    navigator.vibrate([100, 50, 100]);
+                };
+
+                ndef.onreadingerror = () => {
+                    log("Read error. Keep tag steady.", 'error');
+                };
+
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                hideOverlay();
+                log(`Backup failed: ${err.message}`, 'error');
+            }
+        }
+
+        function updateBackupUI() {
+            const btnRestore = document.getElementById('btn-restore');
+            const badge = document.getElementById('backup-badge');
+            const card = document.getElementById('backup-card');
+
+            if (currentBackup) {
+                btnRestore.disabled = false;
+                badge.innerText = "BACKUP READY";
+                badge.className = "text-[10px] bg-green-900 text-green-400 px-2 py-0.5 rounded font-mono animate-pulse";
+                card.classList.remove('hidden');
+                card.innerHTML = `UID: ${currentBackup.serialNumber}<br>Recs: ${currentBackup.records.length}<br>Time: ${new Date(currentBackup.timestamp).toLocaleTimeString()}`;
+            }
+        }
+
+        // --- 2. EMULATE INFO ---
+        function showEmulateInfo() {
+            document.getElementById('info-modal').classList.remove('hidden');
+        }
+
+        // --- 3. FILL TEST (Check Writable) ---
+        async function performFillTest() {
+            if (!confirm("⚠️ WARNING: This will OVERWRITE the tag with dummy data. Ensure you have a backup first.")) return;
+            
+            showOverlay("Writing Dummy Data", "Hold tag to phone. Writing 'NFC_TEST_WRITE'...");
+            activeController = new AbortController();
+
+            try {
+                const ndef = new NDEFReader();
+                // To write, we don't strictly need scan(), but it helps to ensure connection
+                await ndef.write({
+                    records: [{ 
+                        recordType: "text", 
+                        data: `TEST_WRITE_${Date.now()}` 
+                    }]
+                }, { signal: activeController.signal });
+
+                hideOverlay();
+                log("✅ Write Successful! Tag is WRITABLE.", 'success');
+                navigator.vibrate([50, 50, 50, 50, 200]);
+                alert("SUCCESS: Tag accepted the write operation.\nThe tag is NOT locked.\n\nUse 'Restore' to revert changes.");
+
+            } catch (err) {
+                hideOverlay();
+                if (err.name === 'NotAllowedError') {
+                    log("❌ Write Denied. Tag might be LOCKED or Read-Only.", 'error');
+                    alert("WRITE FAILED: The tag rejected the write.\nIt is likely LOCKED/Read-Only.");
+                } else if (err.name === 'AbortError') {
+                    // Ignore
+                } else {
+                    log(`Write Error: ${err.message}`, 'error');
                 }
-                
-                try {
-                    abortController = new AbortController();
-                    ndefReader = new NDEFReader();
-                    await ndefReader.scan({ signal: abortController.signal });
-                    
-                    isScanning = true;
-                    btn.classList.add('scanning-active', 'bg-green-600', 'border-green-400', 'text-white');
-                    btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-400');
-                    btn.innerHTML = '<i class="fa-solid fa-wifi"></i>';
-                    statusText.innerText = "Scanning...";
-                    statusInd.innerText = "LISTENING";
-                    statusInd.className = "text-xs font-mono px-2 py-1 rounded bg-green-900 text-green-400 animate-pulse";
-                    
-                    document.getElementById('scan-empty').classList.remove('hidden');
-                    document.getElementById('latest-result').classList.add('hidden');
+            }
+        }
 
-                    ndefReader.onreading = (event) => {
-                        handleReading(event);
+        // --- 4. RESTORE (Write Backup) ---
+        async function performRestore() {
+            if (!currentBackup) return alert("No backup found!");
+            
+            showOverlay("Restoring Backup", "Hold tag to phone. Writing original data...");
+            activeController = new AbortController();
+
+            try {
+                // Reconstruct NDEF Records from JSON
+                const ndefRecords = currentBackup.records.map(rec => {
+                    const baseRec = {
+                        recordType: rec.recordType,
+                        mediaType: rec.mediaType,
+                        id: rec.id,
+                        encoding: rec.encoding,
+                        lang: rec.lang
                     };
 
-                    ndefReader.onreadingerror = () => {
-                        statusText.innerText = "Read Error - Keep Tag Steady";
-                        navigator.vibrate(300);
-                    };
+                    // Handle Data Buffer
+                    if (rec.data) {
+                        baseRec.data = base64ToBuffer(rec.data);
+                    }
 
-                } catch (error) {
-                    console.error(error);
-                    statusText.innerText = "Error: " + error.message;
-                    isScanning = false;
-                }
-            }
-        }
-
-        function handleReading({ message, serialNumber }) {
-            navigator.vibrate([50, 50]); // Success haptic
-            
-            // 1. Structure Data
-            const scanEntry = {
-                id: crypto.randomUUID(),
-                timestamp: new Date().toISOString(),
-                serialNumber: serialNumber || "No UID",
-                records: message.records.map(r => ({
-                    recordType: r.recordType,
-                    mediaType: r.mediaType,
-                    id: r.id,
-                    encoding: r.encoding,
-                    lang: r.lang,
-                    // Save payload as Base64 for storage
-                    dataBase64: bufferToBase64(r.data),
-                    // Also store size
-                    byteLength: r.data ? r.data.byteLength : 0
-                }))
-            };
-
-            // 2. Save
-            historyData.unshift(scanEntry); // Add to top
-            localStorage.setItem('nfc_debug_history', JSON.stringify(historyData));
-            
-            // 3. Render "Live" View
-            renderLiveResult(scanEntry);
-            
-            // 4. Update History List in background
-            renderHistoryList();
-        }
-
-        // --- RENDERING ---
-
-        function renderLiveResult(entry) {
-            document.getElementById('scan-empty').classList.add('hidden');
-            const container = document.getElementById('latest-result');
-            const content = document.getElementById('latest-result-content');
-            
-            container.classList.remove('hidden');
-            // Re-use the card renderer
-            content.innerHTML = generateDetailHTML(entry, false);
-        }
-
-        function renderHistoryList() {
-            const list = document.getElementById('history-list');
-            list.innerHTML = "";
-            
-            if (historyData.length === 0) {
-                list.innerHTML = `<div class="text-center text-slate-600 py-10 font-mono text-sm">No scans saved.</div>`;
-                return;
-            }
-
-            historyData.forEach(entry => {
-                const date = new Date(entry.timestamp);
-                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                const dateStr = date.toLocaleDateString();
-                
-                const item = document.createElement('div');
-                item.className = "bg-slate-900 border border-slate-800 rounded-lg p-4 hover:bg-slate-800 cursor-pointer transition-colors group";
-                item.onclick = () => openModal(entry.id);
-                
-                item.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-green-400 font-mono font-bold text-sm">${entry.serialNumber}</span>
-                                <span class="text-[10px] text-slate-500 bg-slate-950 px-1.5 rounded">${entry.records.length} Records</span>
-                            </div>
-                            <div class="text-xs text-slate-500 font-mono">${dateStr} ${timeStr}</div>
-                        </div>
-                        <div class="text-slate-600 group-hover:text-blue-400 transition-colors">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
-        }
-
-        function generateDetailHTML(entry) {
-            const date = new Date(entry.timestamp).toLocaleString();
-            
-            let html = `
-                <!-- Meta Card -->
-                <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">UID (Serial)</p>
-                            <p class="font-mono text-green-400 text-lg select-all">${entry.serialNumber}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">Captured</p>
-                            <p class="font-mono text-slate-300 text-xs">${date}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Records Loop
-            if (entry.records.length === 0) {
-                html += `<div class="p-4 border-2 border-dashed border-slate-800 rounded-xl text-center text-slate-500">No NDEF Records Found</div>`;
-            } else {
-                entry.records.forEach((rec, idx) => {
-                    // Restore DataView for processing
-                    const dataView = base64ToBuffer(rec.dataBase64);
-                    const hex = bufferToHex(dataView);
-                    const ascii = bufferToAscii(dataView);
+                    // Special handling for 'empty' (sometimes data field causes issues if present but empty)
+                    if (rec.recordType === 'empty') {
+                        return { recordType: 'empty' };
+                    }
                     
-                    // Decode text payload if recordType is text
-                    let decodedText = null;
-                    if(rec.recordType === 'text') {
-                        try { const decoder = new TextDecoder(); decodedText = decoder.decode(dataView); } catch(e){}
-                    }
-                    if(rec.recordType === 'url') {
-                        try { const decoder = new TextDecoder(); decodedText = decoder.decode(dataView); } catch(e){}
-                    }
-
-                    html += `
-                        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden mb-4 shadow-sm">
-                            <!-- Record Header -->
-                            <div class="bg-slate-800/50 p-3 border-b border-slate-800 flex justify-between items-center">
-                                <span class="font-bold text-xs text-blue-400 uppercase tracking-wider">Record #${idx+1} : ${rec.recordType}</span>
-                                <span class="text-[10px] text-slate-500 font-mono">${rec.byteLength} Bytes</span>
-                            </div>
-                            
-                            <!-- Properties -->
-                            <div class="p-3 grid grid-cols-2 gap-y-2 gap-x-4 text-xs font-mono text-slate-400 border-b border-slate-800/50">
-                                ${rec.mediaType ? `<div><span class="text-slate-600">MIME:</span> <span class="text-slate-300">${rec.mediaType}</span></div>` : ''}
-                                ${rec.encoding ? `<div><span class="text-slate-600">Enc:</span> <span class="text-slate-300">${rec.encoding}</span></div>` : ''}
-                                ${rec.lang ? `<div><span class="text-slate-600">Lang:</span> <span class="text-slate-300">${rec.lang}</span></div>` : ''}
-                                ${rec.id ? `<div><span class="text-slate-600">ID:</span> <span class="text-slate-300">${rec.id}</span></div>` : ''}
-                            </div>
-
-                            ${decodedText ? `
-                            <div class="p-3 bg-blue-900/10 border-b border-blue-900/20">
-                                <p class="text-[10px] uppercase text-blue-500 font-bold mb-1">Decoded Payload</p>
-                                <p class="text-sm text-blue-100 break-words font-medium">${decodedText}</p>
-                            </div>
-                            ` : ''}
-
-                            <!-- Hex Dump -->
-                            <div class="p-3">
-                                <p class="text-[10px] uppercase text-slate-600 font-bold mb-1">Hex Dump</p>
-                                <div class="font-mono text-xs text-slate-400 bg-black/30 p-2 rounded break-all tracking-wider leading-relaxed select-all border border-slate-800">
-                                    ${hex}
-                                </div>
-                            </div>
-                            
-                            <!-- ASCII Dump -->
-                            <div class="p-3 pt-0">
-                                <p class="text-[10px] uppercase text-slate-600 font-bold mb-1">ASCII View</p>
-                                <div class="font-mono text-xs text-slate-500 bg-black/30 p-2 rounded break-all tracking-widest select-all border border-slate-800">
-                                    ${ascii}
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    return baseRec;
                 });
-            }
 
-            return html;
-        }
+                const ndef = new NDEFReader();
+                await ndef.write({ records: ndefRecords }, { signal: activeController.signal });
 
-        // --- MODAL LOGIC ---
+                hideOverlay();
+                log(`✅ Restore Complete. Tag reset to state: ${new Date(currentBackup.timestamp).toLocaleTimeString()}`, 'success');
+                navigator.vibrate(500);
 
-        function openModal(id) {
-            currentViewingId = id;
-            const entry = historyData.find(e => e.id === id);
-            if (!entry) return;
-
-            const modal = document.getElementById('detail-modal');
-            const content = document.getElementById('modal-content');
-            
-            content.innerHTML = generateDetailHTML(entry);
-            modal.classList.remove('translate-y-full');
-        }
-
-        function closeModal() {
-            document.getElementById('detail-modal').classList.add('translate-y-full');
-            currentViewingId = null;
-        }
-
-        function deleteCurrentLog() {
-            if(!confirm("Delete this log permanently?")) return;
-            historyData = historyData.filter(h => h.id !== currentViewingId);
-            localStorage.setItem('nfc_debug_history', JSON.stringify(historyData));
-            closeModal();
-            renderHistoryList();
-        }
-
-        function copyCurrentJSON() {
-            const entry = historyData.find(e => e.id === currentViewingId);
-            if(!entry) return;
-            // Clean up for export (optional, but good)
-            const exportData = JSON.stringify(entry, null, 2);
-            navigator.clipboard.writeText(exportData).then(() => {
-                alert("Raw JSON copied to clipboard");
-            });
-        }
-
-        // --- HISTORY MANAGEMENT ---
-
-        function clearAllHistory() {
-            if(!confirm("Clear ALL history? This cannot be undone.")) return;
-            historyData = [];
-            localStorage.removeItem('nfc_debug_history');
-            renderHistoryList();
-        }
-
-        // --- TAB SWITCHING ---
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById('view-' + tabName).classList.add('active');
-            
-            // UI Updates
-            const scanTabBtn = document.getElementById('tab-scan');
-            const histTabBtn = document.getElementById('tab-history');
-
-            if(tabName === 'scan') {
-                scanTabBtn.classList.replace('border-transparent', 'border-blue-500');
-                scanTabBtn.classList.replace('text-slate-500', 'text-blue-400');
-                histTabBtn.classList.replace('border-blue-500', 'border-transparent');
-                histTabBtn.classList.replace('text-blue-400', 'text-slate-500');
-            } else {
-                renderHistoryList();
-                histTabBtn.classList.replace('border-transparent', 'border-blue-500');
-                histTabBtn.classList.replace('text-slate-500', 'text-blue-400');
-                scanTabBtn.classList.replace('border-blue-500', 'border-transparent');
-                scanTabBtn.classList.replace('text-blue-400', 'text-slate-500');
+            } catch (err) {
+                hideOverlay();
+                log(`Restore Failed: ${err.message}`, 'error');
             }
         }
 
-        // --- INITIALIZATION ---
-        
-        document.getElementById('btn-scan').addEventListener('click', toggleScan);
+        // --- INIT ---
+        window.addEventListener('load', () => {
+            // Load backup from LocalStorage if exists
+            const saved = localStorage.getItem('nfc_sentinel_backup');
+            if (saved) {
+                currentBackup = JSON.parse(saved);
+                updateBackupUI();
+                log("Loaded previous backup from storage.");
+            }
+        });
 
-        // PWA Service Worker (Persistence)
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('install', e => self.skipWaiting());
-                self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
-            `;
-            const swBlob = new Blob([swCode], {type: 'application/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(swBlob));
-        }
-
-        // Create Manifest
+        // PWA Manifest
         const manifest = {
-            "name": "NFC Debugger",
-            "short_name": "NFC Debug",
+            "name": "NFC Sentinel",
+            "short_name": "Sentinel",
             "start_url": "./",
             "display": "standalone",
-            "background_color": "#0f172a",
-            "theme_color": "#0f172a",
-            "icons": [{"src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/svgs/solid/bug.svg", "sizes": "192x192", "type": "image/svg+xml"}]
+            "background_color": "#000000",
+            "theme_color": "#000000",
+            "icons": [{"src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/svgs/solid/shield-halved.svg", "sizes": "192x192", "type": "image/svg+xml"}]
         };
         const link = document.createElement('link');
         link.rel = 'manifest';
