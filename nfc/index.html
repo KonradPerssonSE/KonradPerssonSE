@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFC Sentinel</title>
+    <title>NFC Sentinel V4</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
     <!-- PWA Settings -->
-    <meta name="theme-color" content="#000000">
+    <meta name="theme-color" content="#050505">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -23,22 +23,14 @@
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e5e5e5; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* CRT Scanline Effect */
         .scanline {
             background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
             background-size: 100% 4px;
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 50; opacity: 0.15;
         }
 
-        /* Utility Classes */
         .btn-action { @apply flex items-center justify-center gap-2 font-bold py-4 rounded-xl transition-all active:scale-95 shadow-lg border; }
         
-        /* Animations */
-        @keyframes flash-red { 0%, 100% { background-color: transparent; } 50% { background-color: rgba(220, 38, 38, 0.2); } }
-        .flash-error { animation: flash-red 0.5s ease-in-out; }
-        @keyframes flash-green { 0%, 100% { background-color: transparent; } 50% { background-color: rgba(22, 163, 74, 0.2); } }
-        .flash-success { animation: flash-green 0.5s ease-in-out; }
-
         /* Loader */
         .loader { width: 48px; height: 48px; border: 5px solid #333; border-bottom-color: #22c55e; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -52,11 +44,19 @@
     <header class="bg-black border-b border-gray-900 p-4 shrink-0 z-20 flex justify-between items-center">
         <div class="flex items-center gap-3">
             <i class="fa-solid fa-shield-halved text-green-500 text-xl"></i>
-            <h1 class="font-bold text-lg tracking-tight">NFC SENTINEL <span class="text-xs text-gray-600 font-mono ml-2">V3.1 WRITE OPS</span></h1>
+            <div>
+                <h1 class="font-bold text-lg tracking-tight leading-none">NFC SENTINEL</h1>
+                <div class="text-[10px] text-gray-500 font-mono mt-0.5">V4.0 • NETWORK FIRST</div>
+            </div>
         </div>
-        <button onclick="clearLogs()" class="text-gray-600 hover:text-red-500 transition-colors">
-            <i class="fa-solid fa-trash"></i>
-        </button>
+        <div class="flex gap-3">
+            <button onclick="window.location.reload()" class="text-gray-600 hover:text-white transition-colors" title="Force Reload">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <button onclick="clearLogs()" class="text-gray-600 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
     </header>
 
     <!-- Main Workspace -->
@@ -71,7 +71,7 @@
             <p id="status-sub" class="text-sm text-gray-500 font-mono">Waiting for interaction...</p>
         </div>
 
-        <!-- 1. BACKUP SECTION (The "Golden Master") -->
+        <!-- 1. BACKUP SECTION -->
         <div class="space-y-2">
             <div class="flex justify-between items-end">
                 <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-floppy-disk mr-2"></i>Option 1: Backup</h3>
@@ -82,33 +82,23 @@
                 <i class="fa-solid fa-download"></i> READ & BACKUP TAG
             </button>
             
-            <!-- Hidden Backup Visualizer -->
-            <div id="backup-card" class="hidden bg-gray-900 border border-gray-800 rounded-lg p-3 text-xs font-mono text-gray-400 break-all">
-                <!-- Backup content injected here -->
-            </div>
+            <div id="backup-card" class="hidden bg-gray-900 border border-gray-800 rounded-lg p-3 text-xs font-mono text-gray-400 break-all"></div>
         </div>
 
-        <!-- 2. EMULATE (Not Supported) -->
-         <div class="space-y-2 opacity-75">
-            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-tower-broadcast mr-2"></i>Option 2: Emulate</h3>
-            <button onclick="showEmulateInfo()" class="w-full btn-action bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700">
-                <i class="fa-solid fa-mobile-screen-button"></i> ACT LIKE TAG
-            </button>
-        </div>
-
-        <!-- 3. DESTRUCTIVE TEST (Fill) -->
-        <div class="space-y-2">
-            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-flask mr-2"></i>Option 3: Fill (Test Writable)</h3>
-            <button id="btn-fill" onclick="performFillTest()" class="w-full btn-action bg-yellow-600/10 border-yellow-600/30 text-yellow-500 hover:bg-yellow-600/20">
-                <i class="fa-solid fa-pen-to-square"></i> FILL DUMMY DATA
-            </button>
-        </div>
-
-        <!-- 4. RESTORE -->
-        <div class="space-y-2">
-            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-rotate-left mr-2"></i>Option 4: Restore</h3>
+        <!-- 2. CLONE/RESTORE TO NEW TAG -->
+         <div class="space-y-2">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-clone mr-2"></i>Option 2: Clone / Restore</h3>
             <button id="btn-restore" onclick="performRestore()" disabled class="w-full btn-action bg-green-600/10 border-green-600/30 text-green-500 hover:bg-green-600/20 disabled:opacity-30 disabled:cursor-not-allowed">
-                <i class="fa-solid fa-upload"></i> RESTORE FROM BACKUP
+                <i class="fa-solid fa-upload"></i> WRITE BACKUP TO TAG
+            </button>
+            <p class="text-[10px] text-gray-600 px-1">Use this to restore a tag or clone the backup to a new blank tag.</p>
+        </div>
+
+        <!-- 3. DESTRUCTIVE TEST -->
+        <div class="space-y-2 pt-4 border-t border-gray-800">
+            <h3 class="text-xs font-bold text-red-900 uppercase tracking-widest"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Destructive Zone</h3>
+            <button id="btn-fill" onclick="performFillTest()" class="w-full btn-action bg-red-900/10 border-red-900/30 text-red-500 hover:bg-red-900/20">
+                <i class="fa-solid fa-pen-to-square"></i> TEST WRITE (FILL DATA)
             </button>
         </div>
 
@@ -116,51 +106,142 @@
         <div class="mt-4 border-t border-gray-800 pt-4">
             <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Console Output</h3>
             <div id="console-log" class="h-40 overflow-y-auto bg-black border border-gray-800 rounded-lg p-3 font-mono text-xs text-gray-400 space-y-1">
-                <div class="text-gray-600">> System Initialized.</div>
+                <div class="text-gray-600">> System Initialized v4.0</div>
             </div>
         </div>
 
     </main>
 
-    <!-- Overlay for interactions -->
+    <!-- Overlay -->
     <div id="overlay" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-6 text-center">
         <div class="loader mb-6"></div>
-        <h2 id="overlay-title" class="text-2xl font-bold text-white mb-2">Ready to Scan</h2>
-        <p id="overlay-desc" class="text-gray-400 max-w-xs mx-auto">Hold your device near the NFC tag now.</p>
-        <button onclick="cancelOverlay()" class="mt-8 px-6 py-2 rounded-full border border-gray-600 text-gray-400 hover:text-white transition-colors">
-            CANCEL
-        </button>
+        <h2 id="overlay-title" class="text-2xl font-bold text-white mb-2">Ready</h2>
+        <p id="overlay-desc" class="text-gray-400 max-w-xs mx-auto">Hold device near tag.</p>
+        <button onclick="cancelOverlay()" class="mt-8 px-6 py-2 rounded-full border border-gray-600 text-gray-400 hover:text-white transition-colors">CANCEL</button>
     </div>
 
-    <!-- Info Modal -->
-    <div id="info-modal" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-6">
-        <div class="bg-gray-900 border border-gray-700 p-6 rounded-2xl max-w-sm w-full">
-            <h3 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i>Web NFC Limitation</h3>
-            <p class="text-gray-400 text-sm mb-4 leading-relaxed">
-                <strong>Host Card Emulation (HCE)</strong> is not supported by web browsers. Your phone cannot "act like a tag" to other readers via a website.
-                <br><br>
-                <strong>Alternative:</strong> Use the <strong>Restore</strong> function to clone your backup onto a blank physical tag.
-            </p>
-            <button onclick="document.getElementById('info-modal').classList.add('hidden')" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">
-                UNDERSTOOD
-            </button>
+    <!-- Update Toast -->
+    <div id="update-toast" class="fixed bottom-6 left-6 right-6 bg-blue-600 text-white p-4 rounded-xl shadow-2xl z-50 hidden flex justify-between items-center transform transition-transform translate-y-20">
+        <div>
+            <p class="font-bold">Update Available</p>
+            <p class="text-xs text-blue-200">Restarting to apply changes...</p>
         </div>
+        <div class="loader w-6 h-6 border-white border-b-transparent"></div>
     </div>
 
     <script>
-        // --- STATE ---
-        let currentBackup = null; // Holds the NDEFMessage object + Serial
+        // --- 1. ROBUST SERVICE WORKER GENERATION ---
+        
+        // We define the version here. Changing this string forces a new SW installation.
+        const APP_VERSION = 'v4.0-sentinel'; 
+
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = '${APP_VERSION}';
+                
+                // 1. INSTALL: Skip waiting to take control immediately
+                self.addEventListener('install', (event) => {
+                    self.skipWaiting();
+                });
+
+                // 2. ACTIVATE: Cleanup old caches immediately
+                self.addEventListener('activate', (event) => {
+                    event.waitUntil(
+                        caches.keys().then((cacheNames) => {
+                            return Promise.all(
+                                cacheNames.map((cache) => {
+                                    if (cache !== CACHE_NAME) {
+                                        return caches.delete(cache);
+                                    }
+                                })
+                            );
+                        }).then(() => self.clients.claim()) // Take control of all open tabs
+                    );
+                });
+
+                // 3. FETCH: Network First for HTML, Cache First for Assets
+                self.addEventListener('fetch', (event) => {
+                    const url = new URL(event.request.url);
+                    
+                    // If it's the HTML file (the app itself) -> Network First
+                    if (event.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+                        event.respondWith(
+                            fetch(event.request)
+                                .then((response) => {
+                                    return caches.open(CACHE_NAME).then((cache) => {
+                                        cache.put(event.request, response.clone());
+                                        return response;
+                                    });
+                                })
+                                .catch(() => {
+                                    return caches.match(event.request);
+                                })
+                        );
+                    } else {
+                        // For everything else (CDN scripts, fonts) -> Cache First
+                        event.respondWith(
+                            caches.match(event.request).then((response) => {
+                                return response || fetch(event.request).then((response) => {
+                                    return caches.open(CACHE_NAME).then((cache) => {
+                                        cache.put(event.request, response.clone());
+                                        return response;
+                                    });
+                                });
+                            })
+                        );
+                    }
+                });
+            `;
+
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            const swUrl = URL.createObjectURL(blob);
+
+            navigator.serviceWorker.register(swUrl)
+                .then(registration => {
+                    console.log('SW Registered:', registration);
+                    
+                    // Detect if the SW gets updated
+                    registration.onupdatefound = () => {
+                        const newWorker = registration.installing;
+                        newWorker.onstatechange = () => {
+                            if (newWorker.state === 'activated') {
+                                // New version is active!
+                                showUpdateToast();
+                            }
+                        };
+                    };
+                })
+                .catch(console.error);
+                
+            // Handle controller change (when skipWaiting fires)
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+               if(!localStorage.getItem('sw_refreshed')) {
+                   localStorage.setItem('sw_refreshed', 'true');
+                   window.location.reload();
+               } else {
+                   localStorage.removeItem('sw_refreshed');
+               }
+            });
+        }
+
+        function showUpdateToast() {
+            const t = document.getElementById('update-toast');
+            t.classList.remove('hidden', 'translate-y-20');
+            setTimeout(() => window.location.reload(), 2000);
+        }
+
+        // --- 2. NFC APP LOGIC ---
+
+        let currentBackup = null; 
         let activeController = null;
         const consoleEl = document.getElementById('console-log');
 
-        // --- UTILS ---
         function log(msg, type = 'info') {
             const line = document.createElement('div');
             const ts = new Date().toLocaleTimeString('en-US', {hour12:false});
             line.innerHTML = `<span class="text-gray-600">[${ts}]</span> ${msg}`;
             if(type === 'error') line.classList.add('text-red-400');
             if(type === 'success') line.classList.add('text-green-400');
-            if(type === 'warn') line.classList.add('text-yellow-400');
             consoleEl.prepend(line);
         }
 
@@ -184,10 +265,9 @@
                 activeController = null;
             }
             hideOverlay();
-            log("Operation cancelled by user.", 'warn');
+            log("Operation cancelled.", 'warn');
         }
 
-        // --- BASE64 HELPERS (For Backup Storage) ---
         function bufferToBase64(buffer) {
             let binary = '';
             const bytes = new Uint8Array(buffer);
@@ -203,11 +283,11 @@
             return bytes.buffer;
         }
 
-        // --- 1. BACKUP FUNCTION ---
+        // --- BACKUP ---
         async function performBackup() {
             if (!('NDEFReader' in window)) return alert("Web NFC not supported");
             
-            showOverlay("Reading Tag", "Hold tag to back of phone to save state.");
+            showOverlay("Backing Up", "Hold tag to phone.");
             activeController = new AbortController();
 
             try {
@@ -215,7 +295,6 @@
                 await ndef.scan({ signal: activeController.signal });
 
                 ndef.onreading = ({ message, serialNumber }) => {
-                    // 1. Serialize Records
                     const serializableRecords = message.records.map(r => ({
                         recordType: r.recordType,
                         mediaType: r.mediaType,
@@ -225,7 +304,6 @@
                         data: r.data ? bufferToBase64(r.data.buffer) : null
                     }));
 
-                    // 2. Save to State & LocalStorage
                     currentBackup = {
                         serialNumber: serialNumber,
                         timestamp: new Date().toISOString(),
@@ -233,21 +311,12 @@
                     };
                     
                     localStorage.setItem('nfc_sentinel_backup', JSON.stringify(currentBackup));
-
-                    // 3. UI Update
                     updateBackupUI();
-                    log(`Backup successful. UID: ${serialNumber}`, 'success');
-                    
-                    // Stop scanning immediately after one read
+                    log(`Backup saved. UID: ${serialNumber}`, 'success');
                     activeController.abort();
                     hideOverlay();
                     navigator.vibrate([100, 50, 100]);
                 };
-
-                ndef.onreadingerror = () => {
-                    log("Read error. Keep tag steady.", 'error');
-                };
-
             } catch (err) {
                 if (err.name === 'AbortError') return;
                 hideOverlay();
@@ -269,55 +338,36 @@
             }
         }
 
-        // --- 2. EMULATE INFO ---
-        function showEmulateInfo() {
-            document.getElementById('info-modal').classList.remove('hidden');
-        }
-
-        // --- 3. FILL TEST (Check Writable) ---
+        // --- FILL TEST ---
         async function performFillTest() {
-            if (!confirm("⚠️ WARNING: This will OVERWRITE the tag with dummy data. Ensure you have a backup first.")) return;
+            if (!confirm("⚠️ This will OVERWRITE the tag with dummy data.")) return;
             
-            showOverlay("Writing Dummy Data", "Hold tag to phone. Writing 'NFC_TEST_WRITE'...");
+            showOverlay("Testing Write", "Writing dummy data...");
             activeController = new AbortController();
 
             try {
                 const ndef = new NDEFReader();
-                // To write, we don't strictly need scan(), but it helps to ensure connection
                 await ndef.write({
-                    records: [{ 
-                        recordType: "text", 
-                        data: `TEST_WRITE_${Date.now()}` 
-                    }]
+                    records: [{ recordType: "text", data: "NFC_SENTINEL_TEST_WRITE" }]
                 }, { signal: activeController.signal });
 
                 hideOverlay();
-                log("✅ Write Successful! Tag is WRITABLE.", 'success');
-                navigator.vibrate([50, 50, 50, 50, 200]);
-                alert("SUCCESS: Tag accepted the write operation.\nThe tag is NOT locked.\n\nUse 'Restore' to revert changes.");
-
+                log("✅ Write Test Success. Tag is writable.", 'success');
+                navigator.vibrate([50, 50, 50]);
             } catch (err) {
                 hideOverlay();
-                if (err.name === 'NotAllowedError') {
-                    log("❌ Write Denied. Tag might be LOCKED or Read-Only.", 'error');
-                    alert("WRITE FAILED: The tag rejected the write.\nIt is likely LOCKED/Read-Only.");
-                } else if (err.name === 'AbortError') {
-                    // Ignore
-                } else {
-                    log(`Write Error: ${err.message}`, 'error');
-                }
+                log(`Write Failed: ${err.message}`, 'error');
             }
         }
 
-        // --- 4. RESTORE (Write Backup) ---
+        // --- RESTORE ---
         async function performRestore() {
             if (!currentBackup) return alert("No backup found!");
             
-            showOverlay("Restoring Backup", "Hold tag to phone. Writing original data...");
+            showOverlay("Restoring", "Writing backup data...");
             activeController = new AbortController();
 
             try {
-                // Reconstruct NDEF Records from JSON
                 const ndefRecords = currentBackup.records.map(rec => {
                     const baseRec = {
                         recordType: rec.recordType,
@@ -326,17 +376,8 @@
                         encoding: rec.encoding,
                         lang: rec.lang
                     };
-
-                    // Handle Data Buffer
-                    if (rec.data) {
-                        baseRec.data = base64ToBuffer(rec.data);
-                    }
-
-                    // Special handling for 'empty' (sometimes data field causes issues if present but empty)
-                    if (rec.recordType === 'empty') {
-                        return { recordType: 'empty' };
-                    }
-                    
+                    if (rec.data) baseRec.data = base64ToBuffer(rec.data);
+                    if (rec.recordType === 'empty') return { recordType: 'empty' };
                     return baseRec;
                 });
 
@@ -344,7 +385,7 @@
                 await ndef.write({ records: ndefRecords }, { signal: activeController.signal });
 
                 hideOverlay();
-                log(`✅ Restore Complete. Tag reset to state: ${new Date(currentBackup.timestamp).toLocaleTimeString()}`, 'success');
+                log(`✅ Restore Complete.`, 'success');
                 navigator.vibrate(500);
 
             } catch (err) {
@@ -353,20 +394,18 @@
             }
         }
 
-        // --- INIT ---
+        // --- LOAD ---
         window.addEventListener('load', () => {
-            // Load backup from LocalStorage if exists
             const saved = localStorage.getItem('nfc_sentinel_backup');
             if (saved) {
                 currentBackup = JSON.parse(saved);
                 updateBackupUI();
-                log("Loaded previous backup from storage.");
             }
         });
 
-        // PWA Manifest
+        // Manifest
         const manifest = {
-            "name": "NFC Sentinel",
+            "name": "NFC Sentinel V4",
             "short_name": "Sentinel",
             "start_url": "./",
             "display": "standalone",
