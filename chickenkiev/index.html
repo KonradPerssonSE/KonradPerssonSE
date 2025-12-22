@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projekt Kiev</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"IBM Plex Mono"', 'monospace'],
+                    },
+                    colors: {
+                        paper: '#fdfbf7',
+                        ink: '#1a1a1a',
+                        accent: '#e63946',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #fdfbf7;
+            --text-color: #1a1a1a;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: "IBM Plex Mono", monospace;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4 {
+            font-weight: 500;
+            letter-spacing: -0.5px;
+        }
+
+        /* Checkbox styling */
+        .check-box {
+            appearance: none;
+            -webkit-appearance: none;
+            min-width: 1.1em;
+            height: 1.1em;
+            border: 1px solid var(--text-color);
+            margin-right: 0.75rem;
+            margin-top: 0.15rem; 
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .check-box::before {
+            content: "";
+            width: 0.6em;
+            height: 0.6em;
+            background-color: var(--text-color);
+            transform: scale(0);
+            transition: 0.2s transform ease-in-out;
+        }
+
+        .check-box:checked::before {
+            transform: scale(1);
+        }
+
+        .check-box:checked + span, 
+        .check-box:checked + div {
+            text-decoration: line-through;
+            opacity: 0.4;
+        }
+
+        /* Assignee Badge */
+        .assignee-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 1px solid var(--text-color);
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+            background: white;
+            color: var(--text-color);
+        }
+        
+        /* Specific colors for visual separation if desired, keeping mono for style */
+        .badge-PS { background-color: #1a1a1a; color: white; } /* Petter (Lead) */
+        .badge-GB { background-color: #e5e5e5; } /* Gunnar (Veg) */
+        .badge-KP { border-style: dashed; } /* Konrad (Shopping) */
+
+        /* Navigation */
+        .tab-btn.active {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        [contenteditable]:empty:before {
+            content: attr(placeholder);
+            color: #999;
+            font-style: italic;
+        }
+        
+        [contenteditable]:focus {
+            outline: none;
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        /* Print Styling */
+        @media print {
+            @page { size: A4; margin: 20mm; }
+            body { background: white; color: black; font-size: 10pt; }
+            .no-print { display: none !important; }
+            .tab-content { display: block !important; }
+            
+            #section-schedule, #section-recipes, #section-shopping {
+                page-break-after: always;
+                display: block !important;
+            }
+            
+            .recipe-card, .schedule-day { break-inside: avoid; margin-bottom: 1cm; }
+            input[type="checkbox"] { display: none; }
+            
+            /* Print badges nicely */
+            .assignee-badge { 
+                border: 1px solid black !important; 
+                color: black !important; 
+                background: white !important; 
+                -webkit-print-color-adjust: exact;
+            }
+            .badge-PS { background: #ddd !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-6 px-4 sm:px-8">
+
+    <main class="w-full max-w-3xl relative">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-gray-900 pb-4">
+            <div class="w-full md:w-auto text-center md:text-left">
+                <h1 class="text-3xl sm:text-4xl font-semibold tracking-tighter uppercase">Chicken Kiev</h1>
+                <p class="text-xs uppercase tracking-widest mt-1 opacity-70">Demo & Ansvarsfördelning</p>
+                
+                <!-- Legend -->
+                <div class="flex gap-4 mt-3 text-[10px] uppercase tracking-wide justify-center md:justify-start">
+                    <span class="flex items-center"><span class="assignee-badge badge-PS w-5 h-5 mr-1">PS</span> Lead/Kyckling</span>
+                    <span class="flex items-center"><span class="assignee-badge badge-GB w-5 h-5 mr-1">GB</span> Vegetariskt</span>
+                    <span class="flex items-center"><span class="assignee-badge badge-KP w-5 h-5 mr-1">KP</span> Inköp</span>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 text-xs no-print mt-4 md:mt-0 w-full md:w-auto justify-center">
+                <button onclick="app.toggleEditMode()" id="btn-edit" class="hover:bg-ink hover:text-paper px-3 py-1 border border-transparent transition">
+                    [REDIGERA]
+                </button>
+                <button onclick="app.resetData()" class="hover:bg-ink hover:text-paper px-3 py-1 border border-transparent transition text-red-700 opacity-50 hover:opacity-100">
+                    [ÅTERSTÄLL]
+                </button>
+                <button onclick="window.print()" class="hover:bg-ink hover:text-paper px-3 py-1 border border-ink transition">
+                    [SKRIV UT]
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="flex border-b border-gray-200 mb-8 no-print sticky top-0 bg-[#fdfbf7] z-10 pt-2">
+            <button onclick="app.switchTab('schedule')" id="tab-schedule" class="tab-btn active flex-1 py-3 text-sm uppercase tracking-wider hover:bg-gray-100 transition">Körschema</button>
+            <button onclick="app.switchTab('recipes')" id="tab-recipes" class="tab-btn flex-1 py-3 text-sm uppercase tracking-wider hover:bg-gray-100 transition">Recept</button>
+            <button onclick="app.switchTab('shopping')" id="tab-shopping" class="tab-btn flex-1 py-3 text-sm uppercase tracking-wider hover:bg-gray-100 transition">Inköp (KP)</button>
+        </nav>
+
+        <!-- SCHEME -->
+        <section id="section-schedule" class="tab-content block">
+            <div class="print-header hidden print:block text-2xl font-bold mb-4 uppercase">Körschema</div>
+            <div id="schedule-container" class="space-y-12"></div>
+        </section>
+
+        <!-- RECIPES -->
+        <section id="section-recipes" class="tab-content hidden">
+            <div class="print-header hidden print:block text-2xl font-bold mb-4 uppercase">Recept</div>
+            <div id="recipes-container" class="space-y-16"></div>
+        </section>
+
+        <!-- SHOPPING -->
+        <section id="section-shopping" class="tab-content hidden">
+            <div class="print-header hidden print:block text-2xl font-bold mb-4 uppercase">Inköpslista (Konrad)</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8" id="shopping-container"></div>
+        </section>
+
+    </main>
+
+    <footer class="mt-20 py-8 text-center text-[10px] opacity-40 uppercase tracking-widest no-print">
+        Demo Version • Local Storage • Kiev Project
+    </footer>
+
+    <script>
+        const appData = {
+            schedule: [
+                {
+                    day: "DAG 1 - Inköp & Förberedelser",
+                    timeSlots: [
+                        { time: "FM", title: "Inköp", items: [
+                            { text: "Handla samtliga råvaror enligt lista.", checked: false, assignee: "KP" },
+                            { text: "Dubbelkolla att vi har tillräckligt med matolja.", checked: false, assignee: "KP" }
+                        ]},
+                        { time: "14:00", title: "Vitlökssmör (Kritiskt moment)", items: [
+                            { text: "Mixa smör, vitlök, persilja, citron.", checked: false, assignee: "PS" },
+                            { text: "Rulla smöret i plastfilm till stänger. Frys in (minst 2h).", checked: false, assignee: "PS" }
+                        ]},
+                        { time: "15:00", title: "Prepp: Kyckling", items: [
+                            { text: "Banka ut kycklingfiléerna tunt mellan plast.", checked: false, assignee: "PS" }
+                        ]},
+                        { time: "15:00", title: "Prepp: Vegetariskt", items: [
+                            { text: "Skala rotselleri, koka nästan mjuk i stora bitar.", checked: false, assignee: "GB" },
+                            { text: "Låt svalna och skär ut 'fickor' för smöret.", checked: false, assignee: "GB" }
+                        ]}
+                    ]
+                },
+                {
+                    day: "DAG 2 - Matlagning & Servering",
+                    timeSlots: [
+                        { time: "16:00", title: "Paneringstation", items: [
+                            { text: "Rigga station: Mjöl -> Ägg -> Panko.", checked: false, assignee: "PS" },
+                            { text: "Fyll kyckling med fryst smör, dubbelpanera.", checked: false, assignee: "PS" },
+                            { text: "Fyll rotselleri med fryst smör, dubbelpanera.", checked: false, assignee: "GB" }
+                        ]},
+                        { time: "17:00", title: "Tillbehör", items: [
+                            { text: "Skala och koka potatis till puré.", checked: false, assignee: "PS" },
+                            { text: "Tina ärtor, finhacka schalottenlök till ärtorna.", checked: false, assignee: "GB" }
+                        ]},
+                        { time: "17:40", title: "Fritering", items: [
+                            { text: "Värm olja till 170°C.", checked: false, assignee: "PS" },
+                            { text: "Fritera Kyckling Kiev gyllene (avsluta i ugn om behov).", checked: false, assignee: "PS" },
+                            { text: "Fritera Rotselleri Kiev gyllene.", checked: false, assignee: "GB" }
+                        ]},
+                        { time: "18:00", title: "Servering", items: [
+                            { text: "Lägg upp på varma tallrikar. Servera genast.", checked: false, assignee: "PS" }
+                        ]}
+                    ]
+                }
+            ],
+            recipes: [
+                {
+                    id: 1,
+                    title: "Chicken Kiev",
+                    meta: "Ansvarig: Petter Simström (PS)",
+                    ingredients: [
+                        { text: "4 Kycklingbröstfiléer", checked: false, assignee: "PS" },
+                        { text: "150g Smör (Rumsvarmt)", checked: false, assignee: "PS" },
+                        { text: "4 Vitlöksklyftor (pressade)", checked: false, assignee: "PS" },
+                        { text: "1 dl Hackad Persilja/Dill", checked: false, assignee: "PS" },
+                        { text: "Vetemjöl, 2 Ägg, Panko", checked: false, assignee: "PS" },
+                        { text: "Frityrolja", checked: false, assignee: "PS" }
+                    ],
+                    steps: [
+                        { text: "Blanda smör, örter, vitlök, salt. Rulla i plast, frys in hårt.", checked: false, assignee: "PS" },
+                        { text: "Banka ut filéerna försiktigt men tunt.", checked: false, assignee: "PS" },
+                        { text: "Lägg en bit fryst smör i varje, vik ihop till tätt paket.", checked: false, assignee: "PS" },
+                        { text: "Panera: Mjöl -> Ägg -> Panko. Upprepa ägg+panko för täthet.", checked: false, assignee: "PS" },
+                        { text: "Fritera i 170°C ca 8-10 minuter. Låt rinna av.", checked: false, assignee: "PS" }
+                    ]
+                },
+                {
+                    id: 2,
+                    title: "Rotselleri-Kiev (Vego)",
+                    meta: "Ansvarig: Gunnar Byström (GB)",
+                    ingredients: [
+                        { text: "1 Stor Rotselleri", checked: false, assignee: "GB" },
+                        { text: "75g Smör (Veg alternativt)", checked: false, assignee: "GB" },
+                        { text: "Örter & Vitlök (samma bas)", checked: false, assignee: "GB" },
+                        { text: "Panering (Mjöl, Ägg, Panko)", checked: false, assignee: "GB" }
+                    ],
+                    steps: [
+                        { text: "Skala rotsellerin. Skär i 4 tjocka skivor/klyftor.", checked: false, assignee: "GB" },
+                        { text: "Förväll i saltat vatten tills al dente (inte mosig). Låt ånga av.", checked: false, assignee: "GB" },
+                        { text: "Skär en djup ficka i varje bit. Fyll med fryst kryddsmör.", checked: false, assignee: "GB" },
+                        { text: "Dubbelpanera noggrant (täpp till öppningen).", checked: false, assignee: "GB" },
+                        { text: "Fritera gyllene.", checked: false, assignee: "GB" }
+                    ]
+                },
+                {
+                    id: 3,
+                    title: "Potatispuré & Ärtor",
+                    meta: "Ansvarig: Petter (Puré) & Gunnar (Ärtor)",
+                    ingredients: [
+                        { text: "1 kg Mjölig Potatis", checked: false, assignee: "PS" },
+                        { text: "2 dl Mjölk/Grädde", checked: false, assignee: "PS" },
+                        { text: "500g Gröna Ärtor", checked: false, assignee: "GB" },
+                        { text: "1 Schalottenlök", checked: false, assignee: "GB" }
+                    ],
+                    steps: [
+                        { text: "Koka potatis, pressa, vispa med varm mjölk/smör.", checked: false, assignee: "PS" },
+                        { text: "Fräs lök mjuk, vänd ner ärtor, salt, peppar, citron.", checked: false, assignee: "GB" }
+                    ]
+                }
+            ],
+            shopping: [
+                {
+                    category: "Fågel & Grönt",
+                    items: [
+                        { text: "4 st Kycklingbröstfiléer", checked: false, assignee: "KP" },
+                        { text: "1 stor Rotselleri", checked: false, assignee: "KP" },
+                        { text: "1 kg Mjölig Potatis", checked: false, assignee: "KP" },
+                        { text: "Färsk Persilja (stor knippe)", checked: false, assignee: "KP" },
+                        { text: "Färsk Dill", checked: false, assignee: "KP" },
+                        { text: "Vitlök (1 hel)", checked: false, assignee: "KP" },
+                        { text: "Citroner (2 st)", checked: false, assignee: "KP" },
+                        { text: "Frysta Gröna Ärtor (500g)", checked: false, assignee: "KP" }
+                    ]
+                },
+                {
+                    category: "Mejeri & Skafferi",
+                    items: [
+                        { text: "Smör (Normalsaltat, 500g)", checked: false, assignee: "KP" },
+                        { text: "Mjölk (3%)", checked: false, assignee: "KP" },
+                        { text: "Ägg (6-pack)", checked: false, assignee: "KP" },
+                        { text: "Vetemjöl", checked: false, assignee: "KP" },
+                        { text: "Panko (Japanskt ströbröd) - VIKTIGT", checked: false, assignee: "KP" },
+                        { text: "Frityrolja (Raps, 2 liter)", checked: false, assignee: "KP" },
+                        { text: "Schalottenlök", checked: false, assignee: "KP" }
+                    ]
+                }
+            ]
+        };
+
+        const app = {
+            data: null,
+            isEditMode: false,
+
+            init() {
+                const stored = localStorage.getItem('project_kiev_v1');
+                if (stored) {
+                    this.data = JSON.parse(stored);
+                } else {
+                    this.data = JSON.parse(JSON.stringify(appData));
+                    this.save();
+                }
+                this.renderAll();
+            },
+
+            save() {
+                localStorage.setItem('project_kiev_v1', JSON.stringify(this.data));
+            },
+
+            resetData() {
+                if(confirm("Återställ till originaldemo?")) {
+                    this.data = JSON.parse(JSON.stringify(appData));
+                    this.save();
+                    this.renderAll();
+                }
+            },
+
+            toggleEditMode() {
+                this.isEditMode = !this.isEditMode;
+                const btn = document.getElementById('btn-edit');
+                btn.innerText = this.isEditMode ? "[SPARA]" : "[REDIGERA]";
+                btn.classList.toggle('bg-ink');
+                btn.classList.toggle('text-paper');
+                this.renderAll();
+            },
+
+            switchTab(tabName) {
+                document.querySelectorAll('.tab-content').forEach(el => {
+                    el.classList.add('hidden');
+                    el.classList.remove('block');
+                });
+                const activeEl = document.getElementById(`section-${tabName}`);
+                activeEl.classList.remove('hidden');
+                activeEl.classList.add('block');
+
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+            },
+
+            getBadgeHtml(initials) {
+                if (!initials) return '';
+                return `<span class="assignee-badge badge-${initials}">${initials}</span>`;
+            },
+
+            // --- RENDERERS ---
+
+            renderAll() {
+                this.renderSchedule();
+                this.renderRecipes();
+                this.renderShopping();
+            },
+
+            renderSchedule() {
+                const container = document.getElementById('schedule-container');
+                container.innerHTML = '';
+                
+                this.data.schedule.forEach((day, dIdx) => {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'schedule-day';
+                    dayEl.innerHTML = `
+                        <h2 class="text-xl font-bold uppercase border-b-2 border-ink pb-2 mb-6">${day.day}</h2>
+                        <div class="space-y-6" id="day-${dIdx}"></div>
+                    `;
+                    const slotContainer = dayEl.querySelector(`#day-${dIdx}`);
+                    
+                    day.timeSlots.forEach((slot, sIdx) => {
+                        let itemsHtml = slot.items.map((item, iIdx) => `
+                            <div class="flex items-start mb-2 group">
+                                <label class="flex items-start cursor-pointer select-none w-full">
+                                    <input type="checkbox" class="check-box" ${item.checked ? 'checked' : ''} 
+                                        onchange="app.toggleCheck('schedule', ${dIdx}, ${sIdx}, ${iIdx})">
+                                    <div class="flex items-start flex-1 ${item.checked ? 'line-through opacity-40' : ''}">
+                                        ${this.getBadgeHtml(item.assignee)}
+                                        <span contenteditable="${this.isEditMode}" class="outline-none"
+                                            onblur="app.updateText('schedule', ${dIdx}, ${sIdx}, ${iIdx}, null, this.innerText)">${item.text}</span>
+                                    </div>
+                                </label>
+                            </div>
+                        `).join('');
+
+                        const slotEl = document.createElement('div');
+                        slotEl.className = 'flex gap-4 items-start';
+                        slotEl.innerHTML = `
+                            <div class="w-16 shrink-0 pt-0.5 font-bold text-sm opacity-60">${slot.time}</div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg mb-2 uppercase tracking-wide">${slot.title}</h3>
+                                <div class="text-base font-light">${itemsHtml}</div>
+                            </div>
+                        `;
+                        slotContainer.appendChild(slotEl);
+                    });
+                    container.appendChild(dayEl);
+                });
+            },
+
+            renderRecipes() {
+                const container = document.getElementById('recipes-container');
+                container.innerHTML = '';
+
+                this.data.recipes.forEach((recipe, rIdx) => {
+                    const el = document.createElement('div');
+                    el.className = 'recipe-card';
+                    el.innerHTML = `
+                        <div class="mb-6 border-l-4 border-ink pl-4">
+                            <h2 class="text-2xl font-bold uppercase leading-none mb-1">${recipe.title}</h2>
+                            <p class="text-xs uppercase tracking-widest opacity-60">${recipe.meta}</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <h4 class="font-bold uppercase border-b border-gray-300 mb-3 pb-1 text-sm">Ingredienser</h4>
+                                <ul class="space-y-2 text-sm">
+                                    ${recipe.ingredients.map((ing, i) => `
+                                        <li class="flex items-start">
+                                            <input type="checkbox" class="check-box" ${ing.checked ? 'checked' : ''}
+                                                onchange="app.toggleCheck('recipe-ing', ${rIdx}, ${i})">
+                                            <div class="flex items-start flex-1 ${ing.checked ? 'line-through opacity-40' : ''}">
+                                                ${this.getBadgeHtml(ing.assignee)}
+                                                <span contenteditable="${this.isEditMode}" class="outline-none"
+                                                    onblur="app.updateText('recipe-ing', ${rIdx}, ${i}, null, null, this.innerText)">${ing.text}</span>
+                                            </div>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-bold uppercase border-b border-gray-300 mb-3 pb-1 text-sm">Gör så här</h4>
+                                <ol class="space-y-3">
+                                    ${recipe.steps.map((step, i) => `
+                                        <li class="flex items-start">
+                                            <span class="mr-3 font-bold opacity-30 text-xs mt-1 shrink-0">${i+1}.</span>
+                                            <div class="flex items-start flex-1">
+                                                ${this.getBadgeHtml(step.assignee)}
+                                                <span contenteditable="${this.isEditMode}" class="outline-none"
+                                                    onblur="app.updateText('recipe-step', ${rIdx}, ${i}, null, null, this.innerText)">${step.text}</span>
+                                            </div>
+                                        </li>
+                                    `).join('')}
+                                </ol>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(el);
+                });
+            },
+
+            renderShopping() {
+                const container = document.getElementById('shopping-container');
+                container.innerHTML = '';
+
+                this.data.shopping.forEach((cat, cIdx) => {
+                    const el = document.createElement('div');
+                    el.className = 'break-inside-avoid mb-6';
+                    el.innerHTML = `
+                        <h3 class="text-lg font-bold uppercase border-b-2 border-black mb-4 pb-1">${cat.category}</h3>
+                        <ul class="space-y-2">
+                             ${cat.items.map((item, i) => `
+                                <li class="flex items-start group">
+                                    <input type="checkbox" class="check-box" ${item.checked ? 'checked' : ''}
+                                        onchange="app.toggleCheck('shop', ${cIdx}, ${i})">
+                                    <div class="flex items-start flex-1 ${item.checked ? 'line-through opacity-30' : ''}">
+                                        ${this.getBadgeHtml(item.assignee)}
+                                        <span contenteditable="${this.isEditMode}" class="outline-none"
+                                            onblur="app.updateText('shop', ${cIdx}, ${i}, null, null, this.innerText)">${item.text}</span>
+                                    </div>
+                                    ${this.isEditMode ? `<button onclick="app.deleteItem('shop', ${cIdx}, ${i})" class="text-red-500 opacity-20 hover:opacity-100 px-2">×</button>` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                         ${this.isEditMode ? `<button onclick="app.addItem('shop', ${cIdx})" class="text-xs mt-3 opacity-50 hover:underline">+ Lägg till vara</button>` : ''}
+                    `;
+                    container.appendChild(el);
+                });
+            },
+
+            // --- HANDLERS ---
+            toggleCheck(type, idx1, idx2, idx3) {
+                if (type === 'schedule') this.data.schedule[idx1].timeSlots[idx2].items[idx3].checked = !this.data.schedule[idx1].timeSlots[idx2].items[idx3].checked;
+                else if (type === 'recipe-ing') this.data.recipes[idx1].ingredients[idx2].checked = !this.data.recipes[idx1].ingredients[idx2].checked;
+                else if (type === 'shop') this.data.shopping[idx1].items[idx2].checked = !this.data.shopping[idx1].items[idx2].checked;
+                this.save();
+                this.renderAll();
+            },
+
+            updateText(type, idx1, idx2, idx3, idx4, newText) {
+                if (type === 'schedule') this.data.schedule[idx1].timeSlots[idx2].items[idx3].text = newText;
+                else if (type === 'recipe-ing') this.data.recipes[idx1].ingredients[idx2].text = newText;
+                else if (type === 'recipe-step') this.data.recipes[idx1].steps[idx2].text = newText;
+                else if (type === 'shop') this.data.shopping[idx1].items[idx2].text = newText;
+                this.save();
+            },
+
+            addItem(type, idx1) {
+                if (type === 'shop') {
+                    this.data.shopping[idx1].items.push({text: "Ny vara...", checked: false, assignee: "KP"});
+                    this.save();
+                    this.renderAll();
+                }
+            },
+            
+            deleteItem(type, idx1, idx2) {
+                if (type === 'shop') {
+                    this.data.shopping[idx1].items.splice(idx2, 1);
+                    this.save();
+                    this.renderAll();
+                }
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
