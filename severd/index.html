@@ -1,347 +1,64 @@
-<!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Severd. | Sovereign Intelligence</title>
-    <meta name="description" content="Pro-grade AI and Growth Stack. Sever the cord.">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        lux: {
-                            black: '#030712',      // Deepest Black
-                            charcoal: '#0F1116',   // Dashboard Matte
-                            glass: 'rgba(15, 23, 42, 0.4)',
-                            blue: '#2563EB',       // Corporate Blue
-                            electric: '#38BDF8',   // Teal/Cyan energy
-                            tan: '#B45309',        // Saddle Leather
-                            gold: '#D4AF37',       // Subtle metallic pop
-                            silver: '#94A3B8',     // Brushed Steel
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        serif: ['Playfair Display', 'serif'],
-                    },
-                    backgroundImage: {
-                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-                        'metal-sheen': 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%)',
-                        'luxury-border': 'linear-gradient(to bottom, rgba(148, 163, 184, 0.3), rgba(148, 163, 184, 0.05))',
-                    },
-                    animation: {
-                        'shimmer': 'shimmer 3s linear infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        shimmer: {
-                            '0%': { backgroundPosition: '200% 0' },
-                            '100%': { backgroundPosition: '-200% 0' }
-                        },
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+  <style type="text/tailwindcss">
+    @theme {
+      --color-obsidian: #030508;
+      --color-sovereign: #1e3a8a;
+      --color-saddle: #9a3412;
+      --color-teal: #2dd4bf;
+      --color-silver: #94a3b8;
+    }
 
-    <style>
-        /* Global Lux Feel */
-        body {
-            background-color: #030712;
-            color: #E2E8F0;
-        }
-
-        /* Film Grain Overlay for Texture */
-        .noise-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 50;
-            opacity: 0.03;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #030712; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #B45309; }
-
-        /* The "Stitched Leather" Effect */
-        .leather-stitch {
-            border: 1px dashed rgba(180, 83, 9, 0.3);
-        }
-        
-        /* Glass Panel */
-        .glass-morphism {
-            background: rgba(15, 17, 22, 0.6);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Gradient Text */
-        .text-gradient-gold {
-            background: linear-gradient(to right, #FCD34D, #B45309);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* Spotlight Card Effect */
-        .spotlight-card {
-            position: relative;
-            overflow: hidden;
-        }
-        .spotlight-card::before {
-            content: '';
-            position: absolute;
-            background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.06), transparent 40%);
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-        .spotlight-card:hover::before {
-            opacity: 1;
-        }
-        
-        /* Button Shimmer */
-        .btn-shine {
-            background: linear-gradient(110deg, #0F172A 45%, #1e293b 55%, #0F172A);
-            background-size: 200% 100%;
-            animation: shimmer 4s linear infinite;
-        }
-        
-        .btn-primary-shine {
-            background: linear-gradient(110deg, #2563EB 45%, #60A5FA 50%, #2563EB 55%);
-            background-size: 200% 100%;
-            animation: shimmer 3s linear infinite;
-        }
-    </style>
+    /* “Glint” + “Piano black” card */
+    .cockpit-card{
+      position: relative;
+      border-radius: 20px;
+      background: radial-gradient(120% 120% at 20% 0%, rgba(255,255,255,.06), rgba(255,255,255,0) 55%),
+                  linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,0)),
+                  color-mix(in oklab, var(--color-obsidian) 92%, #0a1b2a);
+      box-shadow:
+        0 18px 50px rgba(0,0,0,.65),
+        inset 0 1px 0 rgba(255,255,255,.08);
+      overflow: clip;
+    }
+    .cockpit-card::before{
+      content:"";
+      position:absolute; inset:0;
+      padding:1px;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,0) 35%, rgba(45,212,191,.35));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      pointer-events:none;
+      opacity:.65;
+    }
+    /* 2% film grain overlay */
+    .grain::after{
+      content:"";
+      position:fixed; inset:-20%;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+      mix-blend-mode: overlay;
+      opacity:.08;
+      pointer-events:none;
+    }
+  </style>
 </head>
-<body class="antialiased selection:bg-lux-tan selection:text-white relative">
-    
-    <div class="noise-overlay"></div>
 
-    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div class="absolute -top-[20%] -left-[10%] w-[700px] h-[700px] rounded-full bg-lux-blue opacity-[0.08] blur-[120px]"></div>
-        <div class="absolute top-[40%] -right-[10%] w-[600px] h-[600px] rounded-full bg-lux-tan opacity-[0.05] blur-[120px]"></div>
-    </div>
-
-    <nav class="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
-        <div class="glass-morphism rounded-full px-6 py-3 flex items-center justify-between w-full max-w-5xl transition-all duration-500 hover:border-lux-silver/20">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded bg-gradient-to-br from-lux-tan to-lux-black border border-lux-tan/30 flex items-center justify-center">
-                    <span class="font-serif text-white font-bold italic">S</span>
-                </div>
-                <span class="font-serif text-xl text-white tracking-wide font-medium">Severd<span class="text-lux-electric">.</span></span>
-            </div>
-            
-            <div class="hidden md:flex items-center gap-8">
-                <a href="#stack" class="text-xs uppercase tracking-[0.2em] text-lux-silver hover:text-white transition-colors">Stack</a>
-                <a href="#pricing" class="text-xs uppercase tracking-[0.2em] text-lux-silver hover:text-white transition-colors">Pricing</a>
-                <a href="#manifesto" class="text-xs uppercase tracking-[0.2em] text-lux-silver hover:text-lux-tan transition-colors">Charter</a>
-            </div>
-
-            <div class="flex items-center gap-4">
-                <a href="#" class="hidden md:block text-xs font-medium text-lux-silver hover:text-white">Sign In</a>
-                <a href="#pricing" class="px-5 py-2 rounded-full bg-lux-tan/10 border border-lux-tan/40 text-lux-tan text-xs font-bold uppercase tracking-wider hover:bg-lux-tan hover:text-white transition-all duration-300 shadow-[0_0_15px_rgba(180,83,9,0.2)]">
-                    Join
-                </a>
-            </div>
-        </div>
-    </nav>
-
-    <section class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden z-10">
-        <div class="absolute inset-0 z-0 opacity-10" style="background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 100px 100px;"></div>
-        
-        <div class="relative z-10 text-center max-w-5xl mx-auto px-6">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-lux-electric/20 bg-lux-electric/5 text-lux-electric text-[10px] font-bold uppercase tracking-widest mb-8 animate-float">
-                <span class="w-1.5 h-1.5 rounded-full bg-lux-electric animate-pulse"></span>
-                System Status: Online
-            </div>
-            
-            <h1 class="text-6xl md:text-8xl font-serif text-white leading-[0.9] tracking-tight mb-8">
-                Own Your <br>
-                <span class="bg-clip-text text-transparent bg-gradient-to-r from-lux-silver via-white to-lux-silver">Intelligence.</span>
-            </h1>
-            
-            <p class="max-w-xl mx-auto text-lg text-lux-silver font-light leading-relaxed mb-12 border-l border-lux-tan/40 pl-6 text-left md:text-center md:border-l-0 md:pl-0">
-                The first pro-grade AI & Growth Stack designed for absolute independence. 
-                <span class="text-white font-normal">Sever the cord to Big Tech.</span>
-            </p>
-
-            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button class="group relative px-8 py-4 bg-white text-black rounded font-medium overflow-hidden transition-all hover:scale-105">
-                    <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:animate-shimmer z-10"></div>
-                    <span class="relative z-20 flex items-center gap-2">
-                        Initialize Stack <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                    </span>
-                </button>
-                <button class="px-8 py-4 rounded border border-lux-silver/20 text-lux-silver hover:bg-white/5 hover:text-white transition-all font-medium flex items-center gap-2">
-                    <i data-lucide="play-circle" class="w-4 h-4"></i> Watch the Brief
-                </button>
-            </div>
-        </div>
-
-        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50">
-            <div class="w-[1px] h-12 bg-gradient-to-b from-transparent via-lux-silver to-transparent"></div>
-            <span class="text-[10px] uppercase tracking-widest text-lux-silver">Scroll</span>
-        </div>
+<body class="grain min-h-screen bg-[var(--color-obsidian)] text-white">
+  <main class="mx-auto max-w-[420px] px-5 py-10">
+    <section class="cockpit-card p-6">
+      <div class="text-xs tracking-[.22em] uppercase text-[var(--color-silver)]">Executive Cockpit</div>
+      <h1 class="mt-2 text-3xl font-semibold">Sovereign Systems</h1>
+      <button class="mt-6 rounded-2xl px-5 py-3 bg-[color:color-mix(in_oklab,var(--color-teal)_18%,transparent)] shadow-[0_0_40px_rgba(45,212,191,.25)] active:scale-[.98] transition">
+        Ignite
+      </button>
     </section>
-
-    <section class="py-32 relative z-10">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-12">
-                <div class="md:col-span-4">
-                    <h2 class="text-4xl font-serif text-white mb-6">The Rental Trap</h2>
-                    <div class="w-12 h-1 bg-lux-tan mb-6"></div>
-                    <p class="text-lux-silver leading-relaxed">
-                        SaaS marketing tools tax your success. The more you grow, the more they charge. Your data is held hostage behind a paywall.
-                    </p>
-                </div>
-                <div class="md:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-lux-charcoal p-8 border-l-2 border-lux-tan relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <i data-lucide="lock" class="w-24 h-24 text-lux-tan"></i>
-                        </div>
-                        <h3 class="text-xl text-white font-medium mb-3">Rented Intelligence</h3>
-                        <p class="text-sm text-gray-400">One policy change, and your AI memory is wiped. You are training their model, not yours.</p>
-                    </div>
-                    <div class="bg-lux-charcoal p-8 border-l-2 border-lux-blue relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <i data-lucide="trending-up" class="w-24 h-24 text-lux-blue"></i>
-                        </div>
-                        <h3 class="text-xl text-white font-medium mb-3">The Growth Tax</h3>
-                        <p class="text-sm text-gray-400">Email lists shouldn't cost $200/mo just because you succeeded in getting subscribers.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="stack" class="py-24 relative z-10 bg-[#050914]">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="flex justify-between items-end mb-16">
-                <div>
-                    <span class="text-lux-electric text-xs font-bold uppercase tracking-widest">Infrastructure</span>
-                    <h2 class="text-4xl font-serif text-white mt-2">The Sovereign Stack</h2>
-                </div>
-                <div class="hidden md:block h-[1px] flex-1 bg-lux-silver/20 mx-8 mb-2"></div>
-                <div class="text-right">
-                    <p class="text-xs text-lux-silver uppercase tracking-wider">Version 1.0.4</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 grid-rows-2 gap-4 h-auto md:h-[600px]">
-                
-                <div class="md:col-span-2 md:row-span-2 rounded-2xl bg-lux-charcoal border border-lux-silver/10 p-8 relative group spotlight-card flex flex-col justify-between">
-                    <div class="absolute inset-0 bg-gradient-to-b from-lux-blue/5 to-transparent pointer-events-none"></div>
-                    <div>
-                        <div class="w-12 h-12 rounded bg-lux-blue/10 flex items-center justify-center text-lux-blue mb-6 border border-lux-blue/20">
-                            <i data-lucide="brain-circuit" class="w-6 h-6"></i>
-                        </div>
-                        <h3 class="text-3xl font-serif text-white mb-4">Private Intelligence</h3>
-                        <p class="text-gray-400 max-w-md">Unthrottled LibreChat interface connected to DeepSeek & Llama 3. No data training. No censorship. Pure reasoning power at your fingertips.</p>
-                    </div>
-                    <div class="mt-8 grid grid-cols-2 gap-4">
-                        <div class="p-4 rounded bg-black/40 border border-white/5">
-                            <span class="block text-2xl font-bold text-white">128k</span>
-                            <span class="text-xs text-gray-500 uppercase tracking-wider">Context Window</span>
-                        </div>
-                        <div class="p-4 rounded bg-black/40 border border-white/5">
-                            <span class="block text-2xl font-bold text-lux-electric">Encrypted</span>
-                            <span class="text-xs text-gray-500 uppercase tracking-wider">Local Storage</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="rounded-2xl bg-lux-charcoal border border-lux-silver/10 p-8 relative group spotlight-card">
-                    <div class="absolute top-4 right-4 text-lux-tan opacity-50"><i data-lucide="mail" class="w-6 h-6"></i></div>
-                    <h3 class="text-xl text-white font-medium mb-2">Sovereign Email</h3>
-                    <p class="text-xs text-gray-400 mb-4">Listmonk instance. Send 100k emails for pennies via AWS SES.</p>
-                    <div class="w-full bg-gray-800 h-1 rounded-full overflow-hidden">
-                        <div class="bg-lux-tan w-3/4 h-full"></div>
-                    </div>
-                    <p class="text-[10px] text-lux-tan mt-2 text-right">Deliverability: 99.8%</p>
-                </div>
-
-                <div class="rounded-2xl bg-lux-charcoal border border-lux-silver/10 p-8 relative group spotlight-card">
-                     <div class="absolute top-4 right-4 text-purple-500 opacity-50"><i data-lucide="share-2" class="w-6 h-6"></i></div>
-                    <h3 class="text-xl text-white font-medium mb-2">Social Command</h3>
-                    <p class="text-xs text-gray-400">Postiz instance. Visual scheduling for X, LinkedIn & IG without the monthly fees.</p>
-                    <div class="flex -space-x-2 mt-4">
-                        <div class="w-8 h-8 rounded-full bg-gray-700 border border-gray-800 flex items-center justify-center text-[10px]">X</div>
-                        <div class="w-8 h-8 rounded-full bg-gray-700 border border-gray-800 flex items-center justify-center text-[10px]">in</div>
-                        <div class="w-8 h-8 rounded-full bg-gray-700 border border-gray-800 flex items-center justify-center text-[10px]">IG</div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </section>
-
-    <section id="pricing" class="py-32 relative z-10 overflow-hidden">
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-full bg-gradient-to-r from-lux-blue/10 via-lux-tan/5 to-lux-blue/10 blur-3xl pointer-events-none"></div>
-
-        <div class="max-w-4xl mx-auto px-6 relative">
-            
-            <div class="bg-lux-charcoal/80 backdrop-blur-xl border border-lux-silver/10 rounded-3xl overflow-hidden shadow-2xl">
-                <div class="grid md:grid-cols-2">
-                    
-                    <div class="p-10 md:p-14 flex flex-col justify-between border-b md:border-b-0 md:border-r border-lux-silver/10">
-                        <div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-lux-blue/20 text-lux-blue border border-lux-blue/30 uppercase">Early Access</span>
-                            </div>
-                            <h3 class="text-4xl font-serif text-white mb-2">Sovereign Tier</h3>
-                            <p class="text-lux-silver text-sm mb-8">Full infrastructure access. No throttles.</p>
-
-                            <ul class="space-y-4 mb-8">
-                                <li class="flex items-start text-sm text-gray-300">
-                                    <i data-lucide="check" class="w-4 h-4 text-lux-blue mt-0.5 mr-3"></i>
-                                    <span>Private AI Chat (GPT-4 Class)</span>
-                                </li>
-                                <li class="flex items-start text-sm text-gray-300">
-                                    <i data-lucide="check" class="w-4 h-4 text-lux-blue mt-0.5 mr-3"></i>
-                                    <span>Unlimited Email Marketing</span>
-                                </li>
-                                <li class="flex items-start text-sm text-gray-300">
-                                    <i data-lucide="check" class="w-4 h-4 text-lux-blue mt-0.5 mr-3"></i>
-                                    <span>Static Web Hosting (Nginx)</span>
-                                </li>
-                                <li class="flex items-start text-sm text-white">
-                                    <i data-lucide="database" class="w-4 h-4 text-lux-tan mt-0.5 mr-3"></i>
-                                    <span class="border-b border-dashed border-lux-tan/50 pb-0.5">Full Data Export Rights</span>
-                                </li>
-                            </ul>
-                        </div>
-                        
-                        <div>
-                            <div class="flex items-baseline gap-1 mb-6">
-                                <span class="text-5xl font-bold text-white tracking-tighter">$9</span>
-                                <span class="text-gray-500">/mo</span>
-                            </div>
-                            <button class="w-full py-4 rounded-lg btn-primary-shine text-white
+  </main>
+</body>
+</html>
