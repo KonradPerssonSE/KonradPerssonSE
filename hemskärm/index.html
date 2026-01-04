@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>PixelOS OLED Home</title>
+    <!-- Tailwind CSS för styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-color: #000000;
+            --grid-cols: 5;
+            --grid-rows: 8;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Förhindra scroll av hela sidan */
+            user-select: none; /* Förhindra textmarkering vid long-press */
+            -webkit-user-select: none;
+            touch-action: none; /* Hantera touch manuellt */
+        }
+
+        /* Grid Container */
+        #app-grid {
+            display: grid;
+            grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr));
+            grid-template-rows: repeat(var(--grid-rows), 1fr);
+            gap: 0.5rem;
+            width: 100vw;
+            height: 100dvh;
+            padding: 0.5rem;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Widget Styles */
+        .widget {
+            position: relative;
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s, border 0.2s;
+        }
+
+        /* Lägen */
+        body.mode-clone { background-color: rgba(30, 58, 138, 0.5); }
+        body.mode-clone .widget { 
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8); 
+            cursor: copy;
+        }
+        body.mode-clone .widget:active { transform: scale(0.95); }
+
+        body.mode-delete { background-color: rgba(127, 29, 29, 0.5); }
+        body.mode-delete .widget { 
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.8); 
+            cursor: not-allowed;
+            animation: shake 0.5s infinite;
+        }
+
+        /* Animationer */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        /* Progress Bar */
+        #progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background-color: white;
+            width: 0%;
+            z-index: 50;
+            transition: width 0.1s linear;
+        }
+
+        /* Modal Transitions */
+        .modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <!-- Long Press Progress -->
+    <div id="progress-bar"></div>
+
+    <!-- Main Grid -->
+    <div id="app-grid">
+        <!-- Widgets injiceras här via JS -->
+    </div>
+
+    <!-- Mode Indicator (Clone/Delete) -->
+    <div id="mode-indicator" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-neutral-800 px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 hidden z-40 border border-neutral-700">
+        <span id="mode-text" class="font-bold uppercase tracking-wider text-sm text-white">LÄGE</span>
+        <button onclick="App.setMode('view')" class="bg-white/20 p-1 rounded-full hover:bg-white/40">
+            <i data-lucide="x" class="w-4 h-4 text-white"></i>
+        </button>
+    </div>
+
+    <!-- Footer Injection Area -->
+    <div id="footer-area" class="fixed bottom-0 left-0 w-full pointer-events-none z-0"></div>
+
+    <!-- --- MODALS --- -->
+
+    <!-- Main Menu -->
+    <div id="menu-modal" class="modal fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center">
+        <div class="grid grid-cols-2 gap-4 max-w-sm w-full p-6">
+            <button onclick="App.openWidgetEditor()" class="menu-btn group bg-neutral-900 border border-neutral-800 p-6 rounded-2xl hover:bg-neutral-800 active:scale-95 transition-all flex flex-col items-center">
+                <i data-lucide="plus" class="w-8 h-8 mb-2 text-white"></i>
+                <span class="text-xs font-medium text-white">+ Widget</span>
+            </button>
+            <button onclick="App.setMode('clone')" class="menu-btn group bg-neutral-900 border border-neutral-800 p-6 rounded-2xl hover:bg-neutral-800 active:scale-95 transition-all flex flex-col items-center">
+                <i data-lucide="copy" class="w-8 h-8 mb-2 text-blue-400"></i>
+                <span class="text-xs font-medium text-white">Clone</span>
+            </button>
+            <button onclick="App.setMode('delete')" class="menu-btn group bg-neutral-900 border border-neutral-800 p-6 rounded-2xl hover:bg-neutral-800 active:scale-95 transition-all flex flex-col items-center">
+                <i data-lucide="trash-2" class="w-8 h-8 mb-2 text-red-400"></i>
+                <span class="text-xs font-medium text-white">Delete Widget</span>
+            </button>
+            <button onclick="App.openGridEditor()" class="menu-btn group bg-neutral-900 border border-neutral-800 p-6 rounded-2xl hover:bg-neutral-800 active:scale-95 transition-all flex flex-col items-center">
+                <i data-lucide="grid-3x3" class="w-8 h-8 mb-2 text-white"></i>
+                <span class="text-xs font-medium text-white">Edit Grid</span>
+            </button>
+            <button onclick="App.openResourcesEditor()" class="menu-btn group bg-neutral-900 border border-neutral-800 p-6 rounded-2xl hover:bg-neutral-800 active:scale-95 transition-all flex flex-col items-center">
+                <i data-lucide="link" class="w-8 h-8 mb-2 text-white"></i>
+                <span class="text-xs font-medium text-white">+ Link Ext</span>
+            </button>
+            <button onclick="App.openSourceEditor()" class="menu-btn group bg-neutral-900 border border-neutral-800 p-6 rounded-2xl hover:bg-neutral-800 active:scale-95 transition-all flex flex-col items-center">
+                <i data-lucide="code" class="w-8 h-8 mb-2 text-white"></i>
+                <span class="text-xs font-medium text-white">Source Code</span>
+            </button>
+            
+            <button onclick="App.closeMenu()" class="col-span-2 mt-4 py-3 bg-neutral-800 rounded-xl font-bold active:scale-95 transition-transform text-white">
+                Stäng
+            </button>
+        </div>
+    </div>
+
+    <!-- Widget Editor -->
+    <div id="widget-editor" class="modal fixed inset-0 bg-black z-50 flex flex-col p-6 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h2 id="widget-editor-title" class="text-2xl font-bold text-white">Ny Widget</h2>
+            <button onclick="App.closeWidgetEditor()" class="p-2 bg-neutral-800 rounded-full text-white"><i data-lucide="x"></i></button>
+        </div>
+        
+        <div class="flex-1 space-y-4">
+            <input type="hidden" id="we-id">
+            <div class="space-y-2">
+                <label class="text-xs text-gray-400 uppercase">Namn</label>
+                <input id="we-name" class="w-full bg-neutral-900 border border-neutral-700 p-3 rounded-lg text-white placeholder-gray-600" placeholder="Widget namn...">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="text-xs text-gray-400 uppercase">Kolumner</label>
+                    <input id="we-cols" type="number" min="1" max="5" class="w-full bg-neutral-900 border border-neutral-700 p-3 rounded-lg text-white" value="1">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs text-gray-400 uppercase">Rader</label>
+                    <input id="we-rows" type="number" min="1" max="8" class="w-full bg-neutral-900 border border-neutral-700 p-3 rounded-lg text-white" value="1">
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs text-gray-400 uppercase">Grid Area (Optional)</label>
+                <input id="we-area" class="w-full bg-neutral-900 border border-neutral-700 p-3 rounded-lg font-mono text-sm text-white" placeholder="row / col / row / col">
+            </div>
+
+            <div class="space-y-2 flex-1 flex flex-col">
+                <label class="text-xs text-gray-400 uppercase">HTML Kod</label>
+                <textarea id="we-html" class="w-full min-h-[200px] bg-neutral-900 border border-neutral-700 p-3 rounded-lg font-mono text-xs text-green-400 placeholder-green-900/50" placeholder="<div>Content...</div>"></textarea>
+            </div>
+        </div>
+
+        <div class="mt-6 flex gap-4 pb-8">
+            <button onclick="App.closeWidgetEditor()" class="flex-1 py-4 bg-red-900/30 text-red-400 rounded-xl font-bold flex items-center justify-center gap-2">
+                <i data-lucide="trash-2" class="w-5 h-5"></i> Stäng & Släng
+            </button>
+            <button onclick="App.saveWidget()" class="flex-1 py-4 bg-white text-black rounded-xl font-bold flex items-center justify-center gap-2">
+                <i data-lucide="save" class="w-5 h-5"></i> Spara
+            </button>
+        </div>
+    </div>
+
+    <!-- Grid Editor -->
+    <div id="grid-editor" class="modal fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
+        <div class="w-full max-w-sm bg-neutral-900 p-6 rounded-2xl border border-neutral-800 text-white">
+            <h2 class="text-xl font-bold mb-4">Redigera Rutnät</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-2 text-sm text-gray-400">Kolumner: <span id="ge-cols-val">5</span></label>
+                    <input id="ge-cols" type="range" min="1" max="8" class="w-full accent-white" oninput="document.getElementById('ge-cols-val').innerText = this.value">
+                </div>
+                <div>
+                    <label class="block mb-2 text-sm text-gray-400">Rader: <span id="ge-rows-val">8</span></label>
+                    <input id="ge-rows" type="range" min="4" max="12" class="w-full accent-white" oninput="document.getElementById('ge-rows-val').innerText = this.value">
+                </div>
+                <button onclick="App.saveGrid()" class="w-full py-3 bg-white text-black font-bold rounded-lg mt-4">Uppdatera Grid</button>
+                <button onclick="App.closeModal('grid-editor')" class="w-full py-3 text-gray-400 mt-2">Avbryt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resources Editor -->
+    <div id="resources-editor" class="modal fixed inset-0 bg-black z-50 flex flex-col p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-white">+ Extern Resurs</h2>
+            <button onclick="App.closeModal('resources-editor')" class="p-2 bg-neutral-800 rounded-full text-white"><i data-lucide="x"></i></button>
+        </div>
+        <div class="flex gap-2 mb-6">
+            <input id="re-input" class="flex-1 bg-neutral-900 border border-neutral-700 p-3 rounded-lg text-sm text-white" placeholder="https://..." >
+            <button onclick="App.addResource()" class="bg-white text-black px-4 rounded-lg font-bold">Lägg till</button>
+        </div>
+        <div id="resource-list" class="flex-1 overflow-y-auto space-y-2">
+            <!-- List items here -->
+        </div>
+    </div>
+
+    <!-- Source Editor -->
+    <div id="source-editor" class="modal fixed inset-0 bg-black z-50 flex flex-col p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-white">Redigera Footer Källkod</h2>
+            <button onclick="App.closeModal('source-editor')" class="p-2 bg-neutral-800 rounded-full text-white"><i data-lucide="x"></i></button>
+        </div>
+        <textarea id="se-code" class="flex-1 w-full bg-neutral-900 border border-neutral-700 p-4 rounded-lg font-mono text-xs text-yellow-400 mb-4 placeholder-yellow-900"></textarea>
+        <button onclick="App.saveSource()" class="w-full py-4 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2">
+            <i data-lucide="save" class="w-5 h-5"></i> Spara Källkod
+        </button>
+    </div>
+
+    <script>
+        // --- DATA & STATE ---
+        const DEMO_WIDGETS = [
+            {
+                id: 'oled-main',
+                name: 'Pixel Home',
+                colSpan: 5,
+                rowSpan: 4,
+                gridArea: '1 / 1 / 5 / 6',
+                html: `
+                    <div class="flex flex-col h-full w-full bg-black text-white p-6 relative overflow-hidden font-sans border border-white/20 rounded-3xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h1 class="text-6xl font-thin tracking-tighter" id="demo-clock">--:--</h1>
+                                <p class="text-gray-400 text-sm mt-1">Söndag, 4 Jan</p>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-3xl">☁️</span>
+                                <span class="text-xl font-bold">3°C</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 grid grid-cols-2 gap-4 mt-4">
+                            <div class="border-r border-white/20 pr-4 flex flex-col justify-end space-y-2">
+                                <div class="h-24 bg-white/5 rounded-md flex items-center justify-center border border-white/20">
+                                    <span class="text-3xl">📖</span>
+                                </div>
+                                <div class="bg-white text-black rounded-md p-2 text-center text-xs font-serif font-bold">
+                                    Design<br>Systems
+                                </div>
+                            </div>
+                            <div class="flex flex-col justify-between items-center pl-2">
+                                <div class="relative group cursor-pointer" onclick="navigator.vibrate(20)">
+                                    <span class="text-6xl">🐕</span>
+                                    <p class="text-center text-xs text-gray-500 mt-2">Pixel</p>
+                                </div>
+                                <div class="h-8 w-[1px] bg-white/50 relative">
+                                    <div class="absolute -top-4 -left-3 text-xl">🌱</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                        /* Självuppdaterande klocka inuti widgeten */
+                        (function(){
+                            const update = () => {
+                                const el = document.getElementById('demo-clock');
+                                if(el) {
+                                    const d = new Date();
+                                    el.innerText = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+                                }
+                            };
+                            update();
+                            setInterval(update, 10000);
+                        })();
+                    <\/script>
+                `
+            },
+            {
+                id: 'color-touch',
+                name: 'Chroma Touch',
+                colSpan: 2,
+                rowSpan: 2,
+                gridArea: '5 / 1 / 7 / 3',
+                html: `
+                    <div id="chroma-box" class="w-full h-full rounded-2xl flex items-center justify-center text-center font-bold text-xs p-2 text-white shadow-lg cursor-pointer transition-colors duration-500"
+                         style="background: linear-gradient(135deg, #FF0080, #7928CA);"
+                         onclick="changeColor(this)">
+                        Tryck för färg
+                    </div>
+                    <script>
+                        function changeColor(el) {
+                            if(navigator.vibrate) navigator.vibrate(30);
+                            const colors = ['#FF0080', '#7928CA', '#0070F3', '#00DFD8', '#FF4D4D', '#F5A623'];
+                            const c1 = colors[Math.floor(Math.random() * colors.length)];
+                            const c2 = colors[Math.floor(Math.random() * colors.length)];
+                            el.style.background = 'linear-gradient(135deg, ' + c1 + ', ' + c2 + ')';
+                        }
+                    <\/script>
+                `
+            }
+        ];
+
+        const App = {
+            state: {
+                widgets: [],
+                grid: { cols: 5, rows: 8 },
+                resources: [],
+                footerCode: '<!-- Footer Content -->',
+                mode: 'view', // view, clone, delete
+            },
+            
+            // --- INITIALIZATION ---
+            init() {
+                this.loadState();
+                this.renderGrid();
+                this.injectResources();
+                this.injectFooter();
+                this.setupLongPress();
+                lucide.createIcons();
+            },
+
+            loadState() {
+                const s = localStorage.getItem('pixelos_state');
+                if (s) {
+                    this.state = JSON.parse(s);
+                } else {
+                    this.state.widgets = DEMO_WIDGETS;
+                }
+                
+                // Applicera Grid CSS Variables
+                document.documentElement.style.setProperty('--grid-cols', this.state.grid.cols);
+                document.documentElement.style.setProperty('--grid-rows', this.state.grid.rows);
+            },
+
+            saveState() {
+                localStorage.setItem('pixelos_state', JSON.stringify(this.state));
+            },
+
+            // --- CORE RENDERING ---
+            renderGrid() {
+                const container = document.getElementById('app-grid');
+                container.innerHTML = ''; // Rensa
+
+                this.state.widgets.forEach(widget => {
+                    const div = document.createElement('div');
+                    div.className = 'widget w-full h-full';
+                    div.id = `widget-${widget.id}`;
+                    
+                    // Grid positionering
+                    if (widget.gridArea) {
+                        div.style.gridArea = widget.gridArea;
+                    } else {
+                        div.style.gridColumn = `span ${widget.colSpan || 1}`;
+                        div.style.gridRow = `span ${widget.rowSpan || 1}`;
+                    }
+
+                    // Content wrap
+                    div.innerHTML = widget.html;
+                    
+                    // Lägg till scripts manuellt för att de ska exekveras
+                    const scripts = div.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        div.appendChild(newScript);
+                        // Ta inte bort originalet om det behövs för styling, men scriptet körs inte automatiskt i innerHTML
+                    });
+
+                    // Event listeners för modes
+                    div.addEventListener('click', (e) => this.handleWidgetClick(widget, e));
+
+                    container.appendChild(div);
+                });
+            },
+
+            injectResources() {
+                // Enkel injection, ingen dupliceringskontroll i denna demo
+                this.state.resources.forEach(res => {
+                    if (res.url.endsWith('.css')) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = res.url;
+                        document.head.appendChild(link);
+                    } else if (res.url.endsWith('.js')) {
+                        const script = document.createElement('script');
+                        script.src = res.url;
+                        document.head.appendChild(script);
+                    }
+                });
+            },
+
+            injectFooter() {
+                const footer = document.getElementById('footer-area');
+                footer.innerHTML = this.state.footerCode;
+                // Exekvera scripts i footer
+                Array.from(footer.querySelectorAll('script')).forEach( oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach( attr => newScript.setAttribute(attr.name, attr.value) );
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            },
+
+            // --- INTERACTION ---
+            setupLongPress() {
+                let timer;
+                let interval;
+                let startTime;
+                const duration = 4000;
+                const progressBar = document.getElementById('progress-bar');
+                const appGrid = document.getElementById('app-grid');
+
+                const start = (e) => {
+                    if(this.state.mode !== 'view') return;
+                    // Ignorera om vi klickar PÅ en widget (om vi vill tillåta widget-klick)
+                    // Men för denna demo, låt oss säga att long-press funkar överallt om man inte drar
+                    
+                    startTime = Date.now();
+                    progressBar.style.width = '0%';
+                    
+                    interval = setInterval(() => {
+                        const elapsed = Date.now() - startTime;
+                        const pct = Math.min((elapsed / duration) * 100, 100);
+                        progressBar.style.width = `${pct}%`;
+                    }, 50);
+
+                    timer = setTimeout(() => {
+                        this.triggerMenu();
+                        reset();
+                    }, duration);
+                };
+
+                const reset = () => {
+                    clearTimeout(timer);
+                    clearInterval(interval);
+                    progressBar.style.width = '0%';
+                };
+
+                // Touch & Mouse events
+                window.addEventListener('touchstart', start, {passive: false});
+                window.addEventListener('touchend', reset);
+                window.addEventListener('touchmove', reset); // Avbryt om man scrollar
+                window.addEventListener('mousedown', start);
+                window.addEventListener('mouseup', reset);
+            },
+
+            triggerMenu() {
+                if(navigator.vibrate) navigator.vibrate(100);
+                this.openModal('menu-modal');
+            },
+
+            handleWidgetClick(widget, e) {
+                if (this.state.mode === 'view') return; // Vanlig interaktion hanteras av widgetens inre HTML
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (this.state.mode === 'delete') {
+                    if(confirm(`Ta bort ${widget.name}?`)) {
+                        this.state.widgets = this.state.widgets.filter(w => w.id !== widget.id);
+                        this.saveState();
+                        this.renderGrid();
+                        this.setMode('view');
+                        this.triggerMenu(); // Gå tillbaka till meny
+                    }
+                } else if (this.state.mode === 'clone') {
+                    // Förbered klon
+                    const clone = {...widget};
+                    clone.name += ' (Kopia)';
+                    clone.gridArea = ''; // Reset position
+                    this.openWidgetEditor(clone);
+                }
+            },
+
+            setMode(mode) {
+                this.state.mode = mode;
+                document.body.className = mode === 'view' ? '' : `mode-${mode}`;
+                
+                const indicator = document.getElementById('mode-indicator');
+                const modeText = document.getElementById('mode-text');
+                
+                if (mode === 'view') {
+                    indicator.classList.add('hidden');
+                } else {
+                    indicator.classList.remove('hidden');
+                    modeText.innerText = mode === 'clone' ? 'Välj widget att klona' : 'Välj widget att radera';
+                    this.closeMenu();
+                }
+            },
+
+            // --- MODAL LOGIC ---
+            openModal(id) {
+                document.getElementById(id).classList.add('active');
+                lucide.createIcons();
+            },
+
+            closeModal(id) {
+                document.getElementById(id).classList.remove('active');
+                // Om vi stänger en sub-modal, öppna huvudmenyn igen om vi inte är i ett aktivt läge
+                if(this.state.mode === 'view' && id !== 'menu-modal') {
+                    this.openModal('menu-modal');
+                }
+            },
+
+            closeMenu() {
+                this.closeModal('menu-modal');
+            },
+
+            // --- FEATURES ---
+            
+            // Widget Editor
+            openWidgetEditor(widgetData = null) {
+                this.closeMenu();
+                this.openModal('widget-editor');
+                
+                if (widgetData) {
+                    // Clone mode
+                    document.getElementById('we-id').value = ''; // Nytt ID genereras vid save
+                    document.getElementById('we-name').value = widgetData.name;
+                    document.getElementById('we-cols').value = widgetData.colSpan;
+                    document.getElementById('we-rows').value = widgetData.rowSpan;
+                    document.getElementById('we-area').value = '';
+                    document.getElementById('we-html').value = widgetData.html;
+                    document.getElementById('widget-editor-title').innerText = "Klona Widget";
+                } else {
+                    // New mode
+                    document.getElementById('we-id').value = '';
+                    document.getElementById('we-name').value = '';
+                    document.getElementById('we-cols').value = 1;
+                    document.getElementById('we-rows').value = 1;
+                    document.getElementById('we-area').value = '';
+                    document.getElementById('we-html').value = '<div class="w-full h-full bg-neutral-900 border border-neutral-800 p-2 text-xs">\n  Ny Widget\n</div>';
+                    document.getElementById('widget-editor-title').innerText = "Ny Widget";
+                }
+            },
+
+            closeWidgetEditor() {
+                this.closeModal('widget-editor');
+            },
+
+            saveWidget() {
+                const name = document.getElementById('we-name').value;
+                if(!name) return alert('Namn krävs');
+
+                const newWidget = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: name,
+                    colSpan: parseInt(document.getElementById('we-cols').value),
+                    rowSpan: parseInt(document.getElementById('we-rows').value),
+                    gridArea: document.getElementById('we-area').value,
+                    html: document.getElementById('we-html').value
+                };
+
+                this.state.widgets.push(newWidget);
+                this.saveState();
+                this.renderGrid();
+                this.setMode('view'); // Reset mode if coming from clone
+                this.closeWidgetEditor();
+            },
+
+            // Grid Editor
+            openGridEditor() {
+                this.closeMenu();
+                document.getElementById('ge-cols').value = this.state.grid.cols;
+                document.getElementById('ge-rows').value = this.state.grid.rows;
+                document.getElementById('ge-cols-val').innerText = this.state.grid.cols;
+                document.getElementById('ge-rows-val').innerText = this.state.grid.rows;
+                this.openModal('grid-editor');
+            },
+
+            saveGrid() {
+                this.state.grid.cols = document.getElementById('ge-cols').value;
+                this.state.grid.rows = document.getElementById('ge-rows').value;
+                
+                document.documentElement.style.setProperty('--grid-cols', this.state.grid.cols);
+                document.documentElement.style.setProperty('--grid-rows', this.state.grid.rows);
+                
+                this.saveState();
+                this.renderGrid(); // Orenderar om widgets anpassar sig
+                this.closeModal('grid-editor');
+            },
+
+            // Resources Editor
+            openResourcesEditor() {
+                this.closeMenu();
+                this.renderResourceList();
+                this.openModal('resources-editor');
+            },
+
+            renderResourceList() {
+                const list = document.getElementById('resource-list');
+                list.innerHTML = '';
+                this.state.resources.forEach((res, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'bg-neutral-900 p-3 rounded-lg flex items-center gap-3 border border-neutral-800 text-white';
+                    item.innerHTML = `
+                        <div class="flex-1 truncate text-xs font-mono text-blue-300">${res.url}</div>
+                        <button onclick="App.removeResource(${idx})" class="p-1 hover:bg-red-900/50 rounded text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    `;
+                    list.appendChild(item);
+                });
+                lucide.createIcons();
+            },
+
+            addResource() {
+                const url = document.getElementById('re-input').value;
+                if(!url) return;
+                this.state.resources.push({ url });
+                this.saveState();
+                document.getElementById('re-input').value = '';
+                this.renderResourceList();
+                alert('Resurs tillagd. Ladda om sidan för att se effekt.');
+            },
+
+            removeResource(idx) {
+                this.state.resources.splice(idx, 1);
+                this.saveState();
+                this.renderResourceList();
+            },
+
+            // Source Editor
+            openSourceEditor() {
+                this.closeMenu();
+                document.getElementById('se-code').value = this.state.footerCode;
+                this.openModal('source-editor');
+            },
+
+            saveSource() {
+                this.state.footerCode = document.getElementById('se-code').value;
+                this.saveState();
+                this.injectFooter();
+                this.closeModal('source-editor');
+            }
+        };
+
+        // Start App
+        window.onload = () => App.init();
+
+    </script>
+</body>
+</html>
