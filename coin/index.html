@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>8-Bit Coin Block</title>
+    <meta name="theme-color" content="#5c94fc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Import a pixel font -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-sky: #5c94fc;
+            --block-base: #e75a10;
+            --block-shadow: #ac3200;
+            --block-highlight: #f7b58c;
+            --coin-gold: #f8da1e;
+            --pixel-size: 4px; /* Adjust scale of the entire scene */
+        }
+
+        body {
+            background-color: var(--bg-sky);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            overflow: hidden;
+            font-family: 'Press Start 2P', cursive;
+            touch-action: manipulation; /* Improves touch response */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* The Scene Container */
+        .stage {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 600px;
+        }
+
+        /* --- Input Mechanism --- */
+        /* We hide the checkbox but stretch it over the block so clicks register */
+        #block-trigger {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            margin: 0;
+        }
+
+        /* The Label acts as the physical block button */
+        .block-label {
+            position: relative;
+            width: calc(16 * var(--pixel-size));
+            height: calc(16 * var(--pixel-size));
+            cursor: pointer;
+            z-index: 10;
+            transform-style: preserve-3d;
+            transition: transform 0.1s;
+            /* Prevent tap highlight color on mobile */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .block-label:active {
+            transform: scale(0.95);
+        }
+
+        /* --- The 3D CSS Block --- */
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: none;
+        }
+
+        /* Trigger bump animation when class is added via JS */
+        .cube.bump {
+            animation: blockBump 0.2s ease-out;
+        }
+
+        .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: var(--block-base);
+            border: calc(1 * var(--pixel-size)) solid black;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+        }
+
+        .face--front {
+            transform: translateZ(calc(8 * var(--pixel-size)));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .face--back { transform: rotateY(180deg) translateZ(calc(8 * var(--pixel-size))); }
+        .face--right { transform: rotateY(90deg) translateZ(calc(8 * var(--pixel-size))); background-color: var(--block-shadow); }
+        .face--left { transform: rotateY(-90deg) translateZ(calc(8 * var(--pixel-size))); }
+        .face--top { transform: rotateX(90deg) translateZ(calc(8 * var(--pixel-size))); background-color: var(--block-highlight); }
+        .face--bottom { transform: rotateX(-90deg) translateZ(calc(8 * var(--pixel-size))); background-color: var(--block-shadow); }
+
+        /* The 8-bit corners (bolts) */
+        .face::after {
+            content: '';
+            position: absolute;
+            top: var(--pixel-size);
+            left: var(--pixel-size);
+            right: var(--pixel-size);
+            bottom: var(--pixel-size);
+            border: var(--pixel-size) dotted #000;
+            opacity: 0.2;
+        }
+
+        /* The Question Mark (CSS Grid / Box Shadow Pixel Art) */
+        .q-mark {
+            width: calc(8 * var(--pixel-size));
+            height: calc(8 * var(--pixel-size));
+            position: relative;
+        }
+
+        /* Generating the pixel art question mark using box-shadows */
+        .q-mark::before {
+            content: '';
+            position: absolute;
+            width: var(--pixel-size);
+            height: var(--pixel-size);
+            background: #000;
+            box-shadow: 
+                calc(2 * var(--pixel-size)) 0 #000,
+                calc(3 * var(--pixel-size)) 0 #000,
+                calc(4 * var(--pixel-size)) 0 #000,
+                calc(5 * var(--pixel-size)) 0 #000,
+                calc(1 * var(--pixel-size)) calc(1 * var(--pixel-size)) #000,
+                calc(6 * var(--pixel-size)) calc(1 * var(--pixel-size)) #000,
+                calc(1 * var(--pixel-size)) calc(2 * var(--pixel-size)) #000,
+                calc(6 * var(--pixel-size)) calc(2 * var(--pixel-size)) #000,
+                calc(6 * var(--pixel-size)) calc(3 * var(--pixel-size)) #000,
+                calc(5 * var(--pixel-size)) calc(4 * var(--pixel-size)) #000,
+                calc(4 * var(--pixel-size)) calc(5 * var(--pixel-size)) #000,
+                calc(3 * var(--pixel-size)) calc(6 * var(--pixel-size)) #000,
+                calc(3 * var(--pixel-size)) calc(8 * var(--pixel-size)) #000;
+            
+            /* Fill color (white/orange) shifted slightly */
+            filter: drop-shadow(0 0 0 #ffdab9); 
+            animation: q-blink 4s infinite steps(1);
+        }
+
+        @keyframes q-blink {
+            0%, 90% { opacity: 1; }
+            92% { opacity: 0.5; }
+            94% { opacity: 1; }
+            96% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* --- Dynamic Effects (Coin & Score) --- */
+        
+        /* Container for spawned effects to keep DOM clean */
+        #effects-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .coin {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: calc(10 * var(--pixel-size));
+            height: calc(14 * var(--pixel-size));
+            background: var(--coin-gold);
+            border: calc(1 * var(--pixel-size)) solid #000;
+            border-radius: 40%;
+            transform: translate(-50%, -50%);
+            /* Inner detail of coin */
+            box-shadow: inset calc(-1 * var(--pixel-size)) calc(-1 * var(--pixel-size)) 0 #d4af37;
+        }
+        
+        .coin::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 35%;
+            width: 30%;
+            height: 60%;
+            background: rgba(255,255,255,0.4);
+        }
+
+        /* Coin Animation Classes */
+        .animate-coin {
+            animation: coinPop 0.6s ease-out forwards;
+        }
+
+        .score-float {
+            position: absolute;
+            left: 50%;
+            top: 40%;
+            transform: translateX(-50%);
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+            font-size: 20px;
+            opacity: 0;
+        }
+
+        .animate-score {
+            animation: scoreUp 0.8s ease-out forwards;
+        }
+
+        /* --- Keyframes --- */
+
+        @keyframes blockBump {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(calc(-4 * var(--pixel-size))); }
+            100% { transform: translateY(0); }
+        }
+
+        @keyframes coinPop {
+            0% {
+                transform: translate(-50%, -50%) translateY(0) scaleX(1);
+                opacity: 1;
+            }
+            25% {
+                transform: translate(-50%, -50%) translateY(calc(-30 * var(--pixel-size))) scaleX(0.1);
+            }
+            50% {
+                transform: translate(-50%, -50%) translateY(calc(-40 * var(--pixel-size))) scaleX(1);
+            }
+            75% {
+                transform: translate(-50%, -50%) translateY(calc(-35 * var(--pixel-size))) scaleX(0.1);
+            }
+            100% {
+                transform: translate(-50%, -50%) translateY(calc(-20 * var(--pixel-size))) scaleX(1);
+                opacity: 0;
+            }
+        }
+
+        @keyframes scoreUp {
+            0% { transform: translate(-50%, -20px); opacity: 0; }
+            20% { transform: translate(-50%, -50px); opacity: 1; }
+            100% { transform: translate(-50%, -80px); opacity: 0; }
+        }
+
+        /* Instructions */
+        .instructions {
+            margin-top: 50px;
+            color: white;
+            text-align: center;
+            font-size: 12px;
+            text-shadow: 2px 2px 0 #000;
+            line-height: 1.5;
+            opacity: 0.8;
+        }
+
+        /* Floor */
+        .floor {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40px;
+            background-color: #783800;
+            border-top: 4px solid #000;
+            background-image: 
+                linear-gradient(30deg, #602d00 12%, transparent 12.5%, transparent 87%, #602d00 87.5%, #602d00),
+                linear-gradient(150deg, #602d00 12%, transparent 12.5%, transparent 87%, #602d00 87.5%, #602d00),
+                linear-gradient(30deg, #602d00 12%, transparent 12.5%, transparent 87%, #602d00 87.5%, #602d00),
+                linear-gradient(150deg, #602d00 12%, transparent 12.5%, transparent 87%, #602d00 87.5%, #602d00),
+                linear-gradient(60deg, #8b4513 25%, transparent 25.5%, transparent 75%, #8b4513 75%, #8b4513),
+                linear-gradient(60deg, #8b4513 25%, transparent 25.5%, transparent 75%, #8b4513 75%, #8b4513);
+            background-size: 20px 35px;
+            background-position: 0 0, 0 0, 10px 18px, 10px 18px, 0 0, 10px 18px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="stage">
+        <!-- The Input -->
+        <input type="checkbox" id="block-trigger">
+        
+        <!-- The Effects Layer -->
+        <div id="effects-layer"></div>
+
+        <!-- The Block -->
+        <label for="block-trigger" class="block-label" id="interactive-block">
+            <div class="cube">
+                <div class="face face--front">
+                    <div class="q-mark"></div>
+                </div>
+                <div class="face face--back"></div>
+                <div class="face face--right"></div>
+                <div class="face face--left"></div>
+                <div class="face face--top"></div>
+                <div class="face face--bottom"></div>
+            </div>
+        </label>
+    </div>
+
+    <div class="floor"></div>
+
+    <div class="instructions">
+        TAP THE BLOCK!<br>
+        Sound & Haptics Enabled
+    </div>
+
+    <script>
+        // Setup Audio Context (Singleton)
+        let audioCtx;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Generate Super Mario Coin Sound via Oscillator
+        // This avoids loading external MP3s and keeps the file self-contained
+        function playCoinSound() {
+            initAudio();
+            
+            const now = audioCtx.currentTime;
+            
+            // First note (B5 - approx 987Hz)
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            
+            osc1.type = 'square'; // 8-bit sound texture
+            osc1.frequency.setValueAtTime(987, now);
+            osc1.frequency.exponentialRampToValueAtTime(1318, now + 0.08); // Slide to E6
+            
+            gain1.gain.setValueAtTime(0.1, now);
+            gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.5); // Fast decay
+            
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            
+            osc1.start(now);
+            osc1.stop(now + 0.6);
+
+            // Second note layer for richness (Higher E6)
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1318, now);
+            
+            gain2.gain.setValueAtTime(0.1, now);
+            gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            
+            osc2.start(now);
+            osc2.stop(now + 0.6);
+        }
+
+        // Logic
+        const checkbox = document.getElementById('block-trigger');
+        const blockLabel = document.getElementById('interactive-block');
+        const cube = document.querySelector('.cube');
+        const effectsLayer = document.getElementById('effects-layer');
+        let coinCount = 0;
+
+        function triggerBlock(e) {
+            // Logic to play sound on first user interaction
+            initAudio();
+
+            // 1. Play Sound
+            playCoinSound();
+
+            // 2. Trigger Haptics (Vibrate 50ms)
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+
+            // 3. Animate Block (Bump)
+            // We remove the class and re-add it to restart animation
+            cube.classList.remove('bump');
+            void cube.offsetWidth; // Trigger reflow to restart animation
+            cube.classList.add('bump');
+
+            // 4. Spawn Coin
+            const coin = document.createElement('div');
+            coin.classList.add('coin', 'animate-coin');
+            effectsLayer.appendChild(coin);
+
+            // 5. Spawn Score (+200)
+            const score = document.createElement('div');
+            score.classList.add('score-float', 'animate-score');
+            score.innerText = "200";
+            effectsLayer.appendChild(score);
+
+            // 6. Cleanup DOM elements after animation
+            setTimeout(() => {
+                if(coin.parentNode) coin.parentNode.removeChild(coin);
+                if(score.parentNode) score.parentNode.removeChild(score);
+            }, 1000);
+
+            // Optional: You can track coin count logic here
+            coinCount++;
+        }
+
+        // We listen to the 'change' event on the hidden checkbox.
+        // This ensures the logic runs regardless of how the checkbox state changes.
+        // But since we want "infinite" clicks, we can also just listen to click on the label.
+        // Let's rely on the click event on the label to prevent the checkbox 
+        // from needing to be toggled back and forth manually.
+        
+        blockLabel.addEventListener('click', (e) => {
+            e.preventDefault(); // Stop the checkbox from actually changing state if we want strictly visual
+            triggerBlock();
+        });
+        
+        // Also handle touch start for faster mobile response
+        blockLabel.addEventListener('touchstart', (e) => {
+            // Prevent default to avoid double-firing with click
+            e.preventDefault(); 
+            triggerBlock();
+            
+            // Visual active state for touch
+            blockLabel.style.transform = 'scale(0.95)';
+            setTimeout(() => { blockLabel.style.transform = 'scale(1)'; }, 100);
+        }, {passive: false});
+
+    </script>
+</body>
+</html>
