@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Busy</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./busy-common.css">
+<script>
+  // Minimal PWA registration
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+  }
+</script>
+
+<body>
+  <div class="busy-wrap">
+    <nav data-busy-nav></nav>
+
+    <div class="busy-card">
+      <h1 style="margin:0 0 8px 0;">Busy</h1>
+      <p style="margin:0 0 14px 0;color:var(--busy-muted);">
+        A tiny start page + boilerplate for weird, useful, useless interfaces.
+      </p>
+
+      <div class="busy-row">
+        <a class="busy-btn" data-busy-start href="./pages/001-eternal-spinner.html">Look Busy Now</a>
+        <a class="busy-btn" href="#rules">About / Rules</a>
+      </div>
+
+      <hr class="busy-hr">
+
+      <div>
+        <h2 style="margin:0 0 10px 0;font-size:18px;">Pages</h2>
+        <div class="busy-row" data-busy-list></div>
+      </div>
+    </div>
+
+    <div id="rules" class="busy-card" style="margin-top:14px;">
+      <h2 style="margin:0 0 10px 0;font-size:18px;">About / Dev rules</h2>
+      <p style="margin:0 0 10px 0;color:var(--busy-muted);">
+        Copy this as a base prompt for any AI assistant working inside Busy.
+      </p>
+
+      <div class="busy-row" style="margin:0 0 10px 0;">
+        <button class="busy-btn" type="button" data-busy-copy="#busy-base-prompt">Copy</button>
+        <small>(Edit it if today’s rule is “break the rules.”)</small>
+      </div>
+
+      <textarea id="busy-base-prompt" class="busy-code" spellcheck="false">You are helping me build "Busy" (Looking Busy App), a portable no-backend PWA playground for weird UI/UX pages.
+
+Hard rules:
+- Vanilla HTML/CSS/JS only (no React).
+- Target: Chrome latest on Desktop + Android. No polyfills, no -webkit prefixes, no ARIA labels.
+- Keep <head> minimal. Style only what is used.
+- Prefer a single self-contained HTML file per page with inline JS/CSS, unless there is a clear reason to split.
+- Use localStorage freely for state, but never send data anywhere.
+- CDN libraries are allowed (and encouraged) when they help, but don't force-fit solutions into libraries.
+
+Project conventions:
+- Pages live in /pages/*.html
+- Navigation is generated from /pages.json (append-only list). To add a page:
+  1) Copy pages/template.html → pages/NNN-your-page.html
+  2) Append an object to pages.json: { "id": "NNN", "title": "...", "path": "pages/NNN-your-page.html", "tags": ["..."] }
+  3) Optionally include ../busy-common.css and ../busy-common.js (both are append-only and optional).
+- Pages can opt-out of the common files and hardcode links back to ../index.html
+
+Tone/code style:
+- Be chill and concise. Prefer self-explanatory code over long comments.
+- Assume touch-first interactions and use browser APIs when fun.
+
+Now: implement the requested Busy page / feature with working code.
+</textarea>
+
+      <hr class="busy-hr">
+
+      <details>
+        <summary style="cursor:pointer;">Rules (short form)</summary>
+        <ul style="color:var(--busy-muted);">
+          <li>No backend. Portable static files.</li>
+          <li>Vanilla JS/CSS/HTML. Chrome latest only. No polyfills or prefixes.</li>
+          <li>Common files are optional + append-only: <code>busy-common.css</code>, <code>busy-common.js</code>.</li>
+          <li>Pages are self-contained toys. Use localStorage for state.</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+
+  <script src="./busy-common.js" data-busy-root="./"></script>
+</body>
+</html>
