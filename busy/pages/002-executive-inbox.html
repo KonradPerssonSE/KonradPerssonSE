@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b0d10">
+<title>Busy · Executive Inbox</title>
+
+<link rel="manifest" href="../manifest.webmanifest">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+  :root{
+    --bg0:#0b0d10;
+    --bg1:#0f1319;
+    --stroke: rgba(255,255,255,.14);
+  }
+  body{ background: var(--bg0); }
+  .appbar{ background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)); border-bottom: 1px solid var(--stroke); }
+  .pane{ background: var(--bg1); border: 1px solid var(--stroke); }
+  .email-item{ cursor: pointer; }
+  .email-item:hover{ filter: brightness(1.06); }
+  .email-item.is-active{ outline: 2px solid rgba(255,255,255,.22); }
+  .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  .soft{ color: rgba(255,255,255,.65); }
+  .chip{ border: 1px solid var(--stroke); border-radius: 999px; padding: .2rem .55rem; font-size:.8rem; color: rgba(255,255,255,.75); }
+  .toast-glow{ box-shadow: 0 10px 40px rgba(0,0,0,.55); }
+  .kbdhint{ font-size: .82rem; color: rgba(255,255,255,.55); }
+  @media (max-width: 767.98px){
+    #layout[data-view="read"] #listCol{ display:none; }
+    #layout[data-view="list"] #readCol{ display:none; }
+  }
+</style>
+
+<body>
+  <header class="appbar">
+    <div class="container-fluid py-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-grow-1">
+          <span class="badge text-bg-light text-dark">Busy</span>
+          <strong>Executive Inbox</strong>
+          <span class="chip d-none d-sm-inline" id="chipCounts">…</span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <div class="progress" style="width:120px;height:10px">
+            <div class="progress-bar" id="progressBar" style="width:0%"></div>
+          </div>
+          <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#settings">
+            <i class="bi bi-gear"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 mt-2">
+        <ul class="nav nav-pills" id="mailTabs">
+          <li class="nav-item"><button class="nav-link active" data-box="inbox" type="button">Inbox</button></li>
+          <li class="nav-item"><button class="nav-link" data-box="snoozed" type="button">Snoozed</button></li>
+          <li class="nav-item"><button class="nav-link" data-box="replied" type="button">Replied</button></li>
+          <li class="nav-item"><button class="nav-link" data-box="trash" type="button">Trash</button></li>
+        </ul>
+
+        <div class="ms-auto d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-light d-md-none" id="mobileBack" type="button" style="display:none;">
+            <i class="bi bi-chevron-left"></i> List
+          </button>
+          <div class="input-group input-group-sm" style="max-width: 320px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input id="search" class="form-control" placeholder="Search" autocomplete="off">
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container-fluid py-3">
+    <div id="layout" data-view="list" class="row g-3">
+      <!-- LIST -->
+      <section id="listCol" class="col-12 col-md-4 col-xl-3">
+        <div class="pane rounded-4 p-2">
+          <div class="d-flex align-items-center justify-content-between px-2 pt-2 pb-1">
+            <div class="soft small" id="listMeta">…</div>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">Quick</button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" id="btnSnoozeAll">Snooze all 1h</button></li>
+                <li><button class="dropdown-item" id="btnArchiveAll">Mark all replied</button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button class="dropdown-item" id="btnReset">Reset mailbox (local)</button></li>
+              </ul>
+            </div>
+          </div>
+
+          <div id="emailList" class="list-group list-group-flush rounded-3 overflow-auto" style="max-height: calc(100vh - 190px);"></div>
+        </div>
+      </section>
+
+      <!-- READER -->
+      <section id="readCol" class="col-12 col-md-8 col-xl-9">
+        <div class="pane rounded-4 p-3" style="min-height: calc(100vh - 160px);">
+          <div id="emptyState" class="text-center py-5">
+            <div class="display-6">Select an email</div>
+            <p class="soft mb-4">Open, snooze, delete, reply. Look efficient.</p>
+            <div class="d-flex justify-content-center gap-2">
+              <button class="btn btn-outline-light" type="button" id="openFirst">
+                <i class="bi bi-inbox"></i> Open first
+              </button>
+              <button class="btn btn-light text-dark" type="button" id="focusMode">
+                <i class="bi bi-arrows-fullscreen"></i> Full screen
+              </button>
+            </div>
+          </div>
+
+          <div id="reader" style="display:none;">
+            <div class="d-flex align-items-start gap-2">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                  <h1 class="h5 mb-0" id="rSubject">…</h1>
+                  <span class="badge text-bg-warning text-dark" id="rImpressive" style="display:none;">Impressive</span>
+                </div>
+                <div class="soft small mt-1" id="rMeta">…</div>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-sm btn-outline-light" id="btnReply"><i class="bi bi-reply"></i></button>
+                <button class="btn btn-sm btn-outline-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><button class="dropdown-item" id="btnSnooze15"><i class="bi bi-clock"></i> Snooze 15m</button></li>
+                  <li><button class="dropdown-item" id="btnSnooze1h"><i class="bi bi-clock"></i> Snooze 1h</button></li>
+                  <li><button class="dropdown-item" id="btnSnoozeTomorrow"><i class="bi bi-calendar2"></i> Snooze to 09:00</button></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><button class="dropdown-item text-danger" id="btnDelete"><i class="bi bi-trash"></i> Delete</button></li>
+                </ul>
+              </div>
+            </div>
+
+            <hr class="border-light opacity-25">
+
+            <div id="rBody" class="soft" style="white-space: pre-wrap; line-height: 1.45;"></div>
+
+            <div class="mt-3">
+              <button class="btn btn-sm btn-outline-light d-md-none" id="mobileReply">
+                <i class="bi bi-reply"></i> Reply
+              </button>
+            </div>
+
+            <div class="collapse mt-3" id="replyPanel">
+              <div class="rounded-4 p-3" style="background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12);">
+                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge text-bg-light text-dark">Draft</span>
+                    <span class="kbdhint">Type anything — the assistant writes for you.</span>
+                  </div>
+
+                  <div class="d-flex align-items-center gap-2">
+                    <select class="form-select form-select-sm" id="replyTemplate" style="max-width: 260px;"></select>
+                    <button class="btn btn-sm btn-outline-light" id="btnResetDraft" type="button">Reset</button>
+                    <button class="btn btn-sm btn-light text-dark" id="btnSend" type="button">
+                      <i class="bi bi-send"></i> Send
+                    </button>
+                  </div>
+                </div>
+
+                <textarea id="replyText" class="form-control mt-2 mono" rows="7" placeholder="Start typing…" spellcheck="false"></textarea>
+                <div class="d-flex align-items-center justify-content-between mt-2">
+                  <small class="soft" id="draftMeta">Local-only. No backend.</small>
+                  <small class="soft">Esc to close • Any key types</small>
+                </div>
+              </div>
+            </div>
+
+            <div id="inboxZero" class="text-center py-5" style="display:none;">
+              <div class="display-6">Inbox 0</div>
+              <p class="soft mb-4">Calm. Controlled. Unbothered.</p>
+              <div class="d-flex justify-content-center gap-2 flex-wrap">
+                <a class="btn btn-outline-light" href="../index.html"><i class="bi bi-house"></i> Home</a>
+                <button class="btn btn-outline-light" type="button" id="navPrev"><i class="bi bi-chevron-left"></i> Prev</button>
+                <button class="btn btn-light text-dark" type="button" id="navRestart"><i class="bi bi-arrow-counterclockwise"></i> Restart</button>
+                <button class="btn btn-outline-light" type="button" id="navNext">Next <i class="bi bi-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Toasts -->
+  <div class="toast-container position-fixed top-0 end-0 p-3" id="toastHost" style="z-index: 1080;"></div>
+
+  <!-- Settings -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="settings">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Settings</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div class="d-grid gap-2">
+        <a class="btn btn-outline-light" href="../index.html"><i class="bi bi-house"></i> Home</a>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-light w-100" type="button" id="setPrev"><i class="bi bi-chevron-left"></i> Prev</button>
+          <button class="btn btn-outline-light w-100" type="button" id="setRestart"><i class="bi bi-arrow-counterclockwise"></i> Restart</button>
+          <button class="btn btn-outline-light w-100" type="button" id="setNext">Next <i class="bi bi-chevron-right"></i></button>
+        </div>
+
+        <hr class="border-light opacity-25">
+
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="togVibrate">
+          <label class="form-check-label" for="togVibrate">Vibration feedback</label>
+        </div>
+
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="togNotify">
+          <label class="form-check-label" for="togNotify">Notification mode (impressive emails)</label>
+          <div class="soft small mt-1">When the tab is hidden, it cycles “impressive” emails as notifications.</div>
+        </div>
+
+        <button class="btn btn-outline-light" type="button" id="btnNotifyNow">
+          <i class="bi bi-bell"></i> Test notification
+        </button>
+
+        <button class="btn btn-outline-light" type="button" id="btnFullscreen">
+          <i class="bi bi-arrows-fullscreen"></i> Full screen
+        </button>
+
+        <button class="btn btn-outline-danger" type="button" id="btnReset2">
+          <i class="bi bi-trash3"></i> Reset mailbox (local)
+        </button>
+
+        <hr class="border-light opacity-25">
+
+        <details>
+          <summary class="soft">Notes</summary>
+          <div class="soft small mt-2">
+            <div>• Replies are “hacker-typer”: your keystrokes reveal a pre-made draft.</div>
+            <div>• State is stored locally (which mailbox each email is in).</div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/TypewriterJS/2.21.0/core.min.js"></script>
+
+  <script>
+  // Service worker (for notification demo + offline cache)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("../sw.js").catch(() => {});
+  }
+  </script>
+
+  <script>
+  (() => {
+    const DATA_URL = "./002-executive-inbox.data.json";
+    const LS_STATE = "busy:002:mailbox";
+    const LS_PREFS = "busy:002:prefs";
+
+    const $ = (s, el=document) => el.querySelector(s);
+    const $$ = (s, el=document) => Array.from(el.querySelectorAll(s));
+    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+    const toastHost = $("#toastHost");
+    const layout = $("#layout");
+    const emailList = $("#emailList");
+    const listMeta = $("#listMeta");
+    const chipCounts = $("#chipCounts");
+    const progressBar = $("#progressBar");
+    const search = $("#search");
+
+    const emptyState = $("#emptyState");
+    const reader = $("#reader");
+    const inboxZero = $("#inboxZero");
+
+    const rSubject = $("#rSubject");
+    const rMeta = $("#rMeta");
+    const rBody = $("#rBody");
+    const rImpressive = $("#rImpressive");
+
+    const replyPanel = $("#replyPanel");
+    const replyText = $("#replyText");
+    const replyTemplate = $("#replyTemplate");
+    const draftMeta = $("#draftMeta");
+
+    const mobileBack = $("#mobileBack");
+
+    let DB = null;
+    let currentBox = "inbox";
+    let selectedId = null;
+
+    const prefs = loadPrefs();
+    $("#togVibrate").checked = !!prefs.vibrate;
+    $("#togNotify").checked = !!prefs.notify;
+
+    // minimal state: map emailId -> { b: "inbox|snoozed|replied|trash", s?: snoozeUntilMs }
+    let state = loadState();
+
+    // ---- Toasts (AI encouragement) ----
+    function showToast({ title="Busy Assistant", body="", icon="bi-stars" }){
+      const el = document.createElement("div");
+      el.className = "toast toast-glow align-items-center border-0";
+      el.setAttribute("role","alert");
+      el.setAttribute("aria-live","polite");
+      el.setAttribute("aria-atomic","true");
+      el.innerHTML = `
+        <div class="toast-header">
+          <i class="bi ${icon} me-2"></i>
+          <strong class="me-auto">${escapeHtml(title)}</strong>
+          <small class="soft">${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</small>
+          <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">${escapeHtml(body)}</div>
+      `;
+      toastHost.appendChild(el);
+      const t = bootstrap.Toast.getOrCreateInstance(el, { delay: 2800 });
+      el.addEventListener("hidden.bs.toast", () => el.remove());
+      t.show();
+    }
+
+    function assistantLine(kind){
+      const list = (DB && DB.assistantToasts && DB.assistantToasts[kind]) || [];
+      if (!list.length) return null;
+      return list[Math.floor(Math.random()*list.length)];
+    }
+
+    function progressLine(){
+      const total = DB.emails.length;
+      const inboxCount = filteredEmails("inbox", "").length;
+      const done = total - inboxCount;
+      const pct = total ? Math.round((done/total)*100) : 100;
+
+      const todayKey = new Date().toISOString().slice(0,10);
+      const memKey = "busy:002:progress";
+      const prev = safeJson(localStorage.getItem(memKey), null);
+
+      let deltaLine = "";
+      if (prev && prev.day && prev.day !== todayKey) {
+        const diff = pct - (prev.pct ?? 0);
+        if (diff > 0) deltaLine = ` Up ${diff}% since yesterday.`;
+        if (diff < 0) deltaLine = ` Fresh day.`;
+      }
+      localStorage.setItem(memKey, JSON.stringify({ day: todayKey, pct }));
+
+      return `Inbox triage: ${pct}% cleared.${deltaLine}`;
+    }
+
+    // ---- Data ----
+    async function loadData(){
+      const res = await fetch(DATA_URL, { cache: "no-cache" });
+      if (!res.ok) throw new Error("Could not load inbox data JSON.");
+      return await res.json();
+    }
+
+    function normalizeState(){
+      // ensure unknown ids not stored; expire snoozes
+      const now = Date.now();
+      const ids = new Set(DB.emails.map(e => e.id));
+      const next = {};
+
+      for (const [id, v] of Object.entries(state.byId || {})) {
+        if (!ids.has(id)) continue;
+        if (v && v.b === "snoozed" && v.s && v.s <= now) continue; // fall back to inbox
+        next[id] = v;
+      }
+      state.byId = next;
+      saveState();
+    }
+
+    function getBox(id){
+      const v = state.byId?.[id];
+      if (!v || !v.b) return "inbox";
+      if (v.b === "snoozed" && v.s && v.s <= Date.now()) return "inbox";
+      return v.b;
+    }
+
+    function setBox(id, box, snoozeUntil){
+      const v = state.byId?.[id] || {};
+      v.b = box;
+      if (box === "snoozed") v.s = snoozeUntil || (Date.now() + 60*60*1000);
+      else delete v.s;
+      state.byId[id] = v;
+      saveState();
+    }
+
+    function filteredEmails(box, q){
+      const query = (q || "").trim().toLowerCase();
+      return DB.emails.filter(e => {
+        if (getBox(e.id) !== box) return false;
+        if (!query) return true;
+        const hay = `${e.fromName} ${e.fromEmail} ${e.fromTitle} ${e.company} ${e.subject} ${e.preview}`.toLowerCase();
+        return hay.includes(query);
+      });
+    }
+
+    // ---- Render ----
+    function render(){
+      const q = search.value || "";
+      const list = filteredEmails(currentBox, q);
+
+      const total = DB.emails.length;
+      const inboxCount = filteredEmails("inbox", "").length;
+      const snoozedCount = filteredEmails("snoozed", "").length;
+      const repliedCount = filteredEmails("replied", "").length;
+      const trashCount = filteredEmails("trash", "").length;
+
+      chipCounts.textContent = `Inbox ${inboxCount} · Snoozed ${snoozedCount} · Replied ${repliedCount} · Trash ${trashCount}`;
+      listMeta.textContent = `${currentBox.toUpperCase()} • ${list.length} message${list.length===1?"":"s"}`;
+
+      const pct = total ? Math.round(((total - inboxCount)/total) * 100) : 100;
+      progressBar.style.width = clamp(pct, 0, 100) + "%";
+
+      if (selectedId && getBox(selectedId) !== currentBox) {
+        selectedId = null;
+        showReader(null);
+      }
+
+      emailList.innerHTML = "";
+      if (!list.length){
+        const empty = document.createElement("div");
+        empty.className = "p-3 text-center soft";
+        empty.textContent = currentBox === "inbox" ? "Inbox 0. Professional silence." : "Nothing here right now.";
+        emailList.appendChild(empty);
+
+        if (currentBox === "inbox" && inboxCount === 0) {
+          emptyState.style.display = "none";
+          reader.style.display = "";
+          inboxZero.style.display = "";
+          showToast({ body: `${assistantLine("inboxZero") || "Inbox zero."} ${progressLine()}`, icon:"bi-trophy" });
+        } else {
+          inboxZero.style.display = "none";
+        }
+      } else {
+        inboxZero.style.display = "none";
+      }
+
+      for (const e of list){
+        const item = document.createElement("div");
+        item.className = "list-group-item email-item px-3 py-3 bg-transparent text-light border-top border-bottom border-light border-opacity-10";
+        item.dataset.id = e.id;
+
+        if (selectedId === e.id) item.classList.add("is-active");
+
+        const star = e.impressive ? `<i class="bi bi-star-fill text-warning"></i>` : `<i class="bi bi-star soft"></i>`;
+        item.innerHTML = `
+          <div class="d-flex align-items-start gap-2">
+            <div class="pt-1">${star}</div>
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center justify-content-between gap-2">
+                <div class="fw-semibold text-truncate">${escapeHtml(e.fromName)} <span class="soft fw-normal">· ${escapeHtml(e.company)}</span></div>
+                <div class="soft small text-nowrap">${escapeHtml(e.receivedAt)}</div>
+              </div>
+              <div class="text-truncate">${escapeHtml(e.subject)}</div>
+              <div class="soft small text-truncate">${escapeHtml(e.preview)}</div>
+            </div>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-light" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" data-act="open"><i class="bi bi-envelope-open"></i> Open</button></li>
+                <li><button class="dropdown-item" data-act="reply"><i class="bi bi-reply"></i> Reply</button></li>
+                <li><button class="dropdown-item" data-act="snooze"><i class="bi bi-clock"></i> Snooze 1h</button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button class="dropdown-item text-danger" data-act="delete"><i class="bi bi-trash"></i> Delete</button></li>
+              </ul>
+            </div>
+          </div>
+        `;
+
+        item.addEventListener("click", (ev) => {
+          const actBtn = ev.target.closest("[data-act]");
+          const ddBtn = ev.target.closest("[data-bs-toggle='dropdown']");
+          if (ddBtn) return;
+          if (actBtn) {
+            ev.stopPropagation();
+            const act = actBtn.dataset.act;
+            if (act === "open") openEmail(e.id);
+            if (act === "reply") { openEmail(e.id); openReply(); }
+            if (act === "snooze") snooze(e.id, "1h");
+            if (act === "delete") del(e.id);
+            return;
+          }
+          openEmail(e.id);
+        });
+
+        emailList.appendChild(item);
+      }
+
+      mobileBack.style.display = (layout.dataset.view === "read") ? "" : "none";
+    }
+
+    function showReader(email){
+      if (!email){
+        selectedId = null;
+        emptyState.style.display = "";
+        reader.style.display = "none";
+        return;
+      }
+
+      emptyState.style.display = "none";
+      reader.style.display = "";
+
+      rSubject.textContent = email.subject;
+      rMeta.textContent = `${email.fromName} <${email.fromEmail}> · ${email.fromTitle} · ${email.receivedAt}`;
+      rBody.textContent = (email.body || []).join("\n\n");
+      rImpressive.style.display = email.impressive ? "" : "none";
+
+      if (window.innerWidth < 768) {
+        layout.dataset.view = "read";
+        mobileBack.style.display = "";
+      }
+    }
+
+    function openEmail(id){
+      selectedId = id;
+      const email = DB.emails.find(e => e.id === id);
+      const box = getBox(id);
+
+      if (box !== currentBox) setActiveTab(box);
+
+      render();
+      showReader(email);
+      showToast({ body: `${assistantLine("open") || "Opened."} ${progressLine()}`, icon:"bi-envelope-open" });
+      vibrate([8]);
+    }
+
+    function setActiveTab(box){
+      currentBox = box;
+      $$("#mailTabs .nav-link").forEach(b => b.classList.toggle("active", b.dataset.box === box));
+      layout.dataset.view = "list";
+      render();
+    }
+
+    // ---- Actions ----
+    function del(id){
+      setBox(id, "trash");
+      if (selectedId === id) showReader(null);
+      showToast({ body: `${assistantLine("delete") || "Deleted."} ${progressLine()}`, icon:"bi-trash" });
+      vibrate([14, 20, 14]);
+      render();
+    }
+
+    function snooze(id, mode){
+      let until = Date.now() + 60*60*1000;
+      let label = "1h";
+
+      if (mode === "15m") { until = Date.now() + 15*60*1000; label = "15m"; }
+      if (mode === "1h") { until = Date.now() + 60*60*1000; label = "1h"; }
+      if (mode === "tomorrow") {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        d.setHours(9, 0, 0, 0);
+        until = d.getTime();
+        label = "09:00";
+      }
+
+      setBox(id, "snoozed", until);
+      if (selectedId === id) showReader(null);
+      showToast({ body: `${assistantLine("snooze") || "Snoozed."} Until ${label}. ${progressLine()}`, icon:"bi-clock" });
+      vibrate([10]);
+      render();
+    }
+
+    function markReplied(id){
+      setBox(id, "replied");
+      showToast({ body: `${assistantLine("send") || "Sent."} ${progressLine()}`, icon:"bi-send" });
+      vibrate([8, 10, 8]);
+      render();
+    }
+
+    // ---- Reply "hacker typer" ----
+    let draft = { tplId: null, idx: 0 };
+    let tw = null;
+
+    function buildTypewriter(){
+      if (tw) return tw;
+
+      const customNodeCreator = (character) => {
+        replyText.value = replyText.value + character;
+        replyText.scrollTop = replyText.scrollHeight;
+        return null;
+      };
+
+      tw = new Typewriter(null, {
+        loop: false,
+        delay: 0,
+        cursor: "",
+        onCreateTextNode: customNodeCreator
+      });
+      return tw;
+    }
+
+    function openReply(){
+      if (!selectedId) return;
+
+      bootstrap.Collapse.getOrCreateInstance(replyPanel, { toggle: false }).show();
+      replyText.focus();
+
+      showToast({ body: `${assistantLine("reply") || "Draft ready."}`, icon:"bi-reply" });
+      vibrate([6]);
+
+      if (!draft.tplId) {
+        draft.tplId = replyTemplate.value || (DB.replyTemplates?.[0]?.id ?? null);
+        draft.idx = 0;
+      }
+      updateDraftMeta();
+    }
+
+    function closeReply(){
+      bootstrap.Collapse.getOrCreateInstance(replyPanel, { toggle: false }).hide();
+    }
+
+    function resetDraft(){
+      replyText.value = "";
+      draft.idx = 0;
+      buildTypewriter();
+      showToast({ body: "Draft reset. Maintain composure.", icon:"bi-arrow-counterclockwise" });
+      vibrate([6]);
+      updateDraftMeta();
+    }
+
+    function activeTemplateText(){
+      const tpl = (DB.replyTemplates || []).find(t => t.id === draft.tplId) || DB.replyTemplates?.[0];
+      return tpl ? tpl.text : "";
+    }
+
+    function updateDraftMeta(){
+      const tpl = (DB.replyTemplates || []).find(t => t.id === draft.tplId);
+      draftMeta.textContent = tpl ? `Template: ${tpl.label}` : "Template";
+    }
+
+    function typeNextChar(){
+      const text = activeTemplateText();
+      if (!text) return;
+      if (draft.idx >= text.length) {
+        showToast({ body: "Draft complete. Send when ready.", icon:"bi-check2" });
+        vibrate([4]);
+        return;
+      }
+      const ch = text[draft.idx++];
+      buildTypewriter().typeString(ch).start();
+    }
+
+    function isTypingKey(e){
+      if (e.ctrlKey || e.metaKey || e.altKey) return false;
+      const k = e.key;
+      if (k === "Shift" || k === "Tab") return false;
+      if (k.startsWith("Arrow")) return false;
+      if (k === "Escape" || k === "Enter") return true;
+      if (k === "Backspace" || k === "Delete") return true;
+      return k.length === 1;
+    }
+
+    replyText.addEventListener("keydown", (e) => {
+      if (!isTypingKey(e)) return;
+      e.preventDefault();
+
+      if (e.key === "Escape") return closeReply();
+      if (e.key === "Backspace" || e.key === "Delete") {
+        showToast({ body: "No backspace. Executive confidence.", icon:"bi-shield-check" });
+        vibrate([4]);
+        return;
+      }
+      typeNextChar();
+      vibrate([2]);
+    });
+
+    // ---- Notifications + vibration ----
+    function loadPrefs(){
+      return safeJson(localStorage.getItem(LS_PREFS), { vibrate: true, notify: false });
+    }
+    function savePrefs(){
+      localStorage.setItem(LS_PREFS, JSON.stringify(prefs));
+    }
+    function vibrate(pattern){
+      if (!prefs.vibrate) return;
+      if ("vibrate" in navigator) navigator.vibrate(pattern);
+    }
+
+    let notifyTimer = null;
+    let notifyIdx = 0;
+
+    async function ensureNotifyPermission(){
+      if (!("Notification" in window)) {
+        showToast({ body: "Notifications not supported here.", icon:"bi-bell-slash" });
+        return false;
+      }
+      if (Notification.permission === "granted") return true;
+      const p = await Notification.requestPermission();
+      return p === "granted";
+    }
+
+    async function sendOneNotification(){
+      const impressive = DB.emails.filter(e => e.impressive && getBox(e.id) === "inbox");
+      if (!impressive.length) return;
+      const e = impressive[notifyIdx % impressive.length];
+      notifyIdx++;
+
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        reg.showNotification(e.fromName, {
+          body: e.subject,
+          tag: "busy-exec-inbox",
+          renotify: true,
+          badge: "../assets/icon-192.png",
+          icon: "../assets/icon-192.png",
+          data: { id: e.id }
+        });
+        vibrate([10, 30, 10]);
+      } catch (_) {
+        new Notification(e.fromName, { body: e.subject });
+        vibrate([10, 30, 10]);
+      }
+    }
+
+    function startNotifyLoop(){
+      if (notifyTimer) return;
+      notifyTimer = setInterval(() => {
+        if (document.visibilityState === "hidden") sendOneNotification();
+      }, 9000);
+    }
+    function stopNotifyLoop(){
+      clearInterval(notifyTimer);
+      notifyTimer = null;
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (!prefs.notify) return;
+      if (document.visibilityState === "hidden") startNotifyLoop();
+      else stopNotifyLoop();
+    });
+
+    // ---- Helpers ----
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function safeJson(s, fallback){
+      try { return s ? JSON.parse(s) : fallback; } catch { return fallback; }
+    }
+
+    function loadState(){
+      const s = safeJson(localStorage.getItem(LS_STATE), null);
+      return s && typeof s === "object" ? s : { byId: {} };
+    }
+    function saveState(){
+      localStorage.setItem(LS_STATE, JSON.stringify(state));
+    }
+
+    function hardReset(){
+      localStorage.removeItem(LS_STATE);
+      state = { byId: {} };
+      selectedId = null;
+      closeReply();
+      showReader(null);
+      showToast({ body: "Mailbox reset. Fresh performance.", icon:"bi-arrow-counterclockwise" });
+      render();
+    }
+
+    // ---- Navigation (Prev/Next/Restart) ----
+    async function navResolve(){
+      try{
+        const res = await fetch("../pages.json", { cache:"no-cache" });
+        if (!res.ok) throw new Error();
+        const pages = await res.json();
+        const idx = pages.findIndex(p => (p.path || "").endsWith("002-executive-inbox.html"));
+        return { prev: pages[idx-1] || null, next: pages[idx+1] || null };
+      } catch {
+        return { prev:null, next:null };
+      }
+    }
+
+    async function navGo(which){
+      const { prev, next } = await navResolve();
+      if (which === "restart") return hardReset();
+      if (which === "prev" && prev) return location.href = "../" + prev.path;
+      if (which === "next" && next) return location.href = "../" + next.path;
+      showToast({ body: "No page there (yet). Add one to pages.json.", icon:"bi-compass" });
+    }
+
+    // ---- Wire UI ----
+    $("#openFirst").addEventListener("click", () => {
+      const first = filteredEmails(currentBox, search.value)[0] || filteredEmails("inbox","")[0];
+      if (first) openEmail(first.id);
+    });
+
+    $("#focusMode").addEventListener("click", () => $("#btnFullscreen").click());
+
+    $("#btnReply").addEventListener("click", openReply);
+    $("#mobileReply").addEventListener("click", openReply);
+
+    $("#btnDelete").addEventListener("click", () => selectedId && del(selectedId));
+    $("#btnSnooze15").addEventListener("click", () => selectedId && snooze(selectedId, "15m"));
+    $("#btnSnooze1h").addEventListener("click", () => selectedId && snooze(selectedId, "1h"));
+    $("#btnSnoozeTomorrow").addEventListener("click", () => selectedId && snooze(selectedId, "tomorrow"));
+
+    $("#btnSend").addEventListener("click", () => {
+      if (!selectedId) return;
+      closeReply();
+      markReplied(selectedId);
+      showReader(null);
+      selectedId = null;
+      setActiveTab("inbox");
+    });
+
+    $("#btnResetDraft").addEventListener("click", resetDraft);
+    $("#replyTemplate").addEventListener("change", () => {
+      draft.tplId = replyTemplate.value;
+      resetDraft();
+      updateDraftMeta();
+    });
+
+    $$("#mailTabs .nav-link").forEach(btn => {
+      btn.addEventListener("click", () => setActiveTab(btn.dataset.box));
+    });
+
+    search.addEventListener("input", () => render());
+
+    mobileBack.addEventListener("click", () => {
+      layout.dataset.view = "list";
+      mobileBack.style.display = "none";
+    });
+
+    $("#btnSnoozeAll").addEventListener("click", () => {
+      for (const e of filteredEmails("inbox","")) snooze(e.id, "1h");
+      showToast({ body: "Snoozed the inbox. Tactical retreat.", icon:"bi-clock" });
+    });
+
+    $("#btnArchiveAll").addEventListener("click", () => {
+      for (const e of filteredEmails("inbox","")) setBox(e.id, "replied");
+      showToast({ body: "Marked replied. Inbox looks excellent.", icon:"bi-check2-all" });
+      render();
+    });
+
+    $("#btnReset").addEventListener("click", hardReset);
+    $("#btnReset2").addEventListener("click", hardReset);
+
+    $("#btnFullscreen").addEventListener("click", async () => {
+      try{
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+        else await document.exitFullscreen();
+      } catch {}
+    });
+
+    $("#togVibrate").addEventListener("change", (e) => {
+      prefs.vibrate = e.target.checked;
+      savePrefs();
+      showToast({ body: prefs.vibrate ? "Vibration on." : "Vibration off.", icon:"bi-phone-vibrate" });
+      vibrate([8, 20, 8]);
+    });
+
+    $("#togNotify").addEventListener("change", async (e) => {
+      const want = e.target.checked;
+      if (want) {
+        const ok = await ensureNotifyPermission();
+        if (!ok) { e.target.checked = false; return; }
+      }
+      prefs.notify = want;
+      savePrefs();
+      showToast({ body: want ? "Notification mode armed." : "Notification mode off.", icon:"bi-bell" });
+      if (want && document.visibilityState === "hidden") startNotifyLoop();
+      if (!want) stopNotifyLoop();
+    });
+
+    $("#btnNotifyNow").addEventListener("click", async () => {
+      const ok = await ensureNotifyPermission();
+      if (!ok) return;
+      await sendOneNotification();
+      showToast({ body: "Test notification sent.", icon:"bi-bell" });
+    });
+
+    ["setPrev","navPrev"].forEach(id => $("#"+id).addEventListener("click", () => navGo("prev")));
+    ["setNext","navNext"].forEach(id => $("#"+id).addEventListener("click", () => navGo("next")));
+    ["setRestart","navRestart"].forEach(id => $("#"+id).addEventListener("click", () => navGo("restart")));
+
+    // ---- Boot ----
+    (async () => {
+      DB = await loadData();
+      normalizeState();
+
+      replyTemplate.innerHTML = (DB.replyTemplates || []).map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.label)}</option>`).join("");
+      draft.tplId = replyTemplate.value;
+
+      setInterval(() => {
+        const before = JSON.stringify(state.byId);
+        normalizeState();
+        const after = JSON.stringify(state.byId);
+        if (before !== after) {
+          showToast({ body: "A snoozed email resurfaced. Controlled timing.", icon:"bi-inbox" });
+          render();
+        }
+      }, 60000);
+
+      render();
+      showToast({ body: "Inbox loaded. You look very in demand.", icon:"bi-stars" });
+
+      if (prefs.notify && document.visibilityState === "hidden") startNotifyLoop();
+    })().catch(err => {
+      console.warn(err);
+      showToast({ body: "Data failed to load. Check the JSON file path.", icon:"bi-exclamation-triangle" });
+    });
+  })();
+  </script>
+</body>
+</html>

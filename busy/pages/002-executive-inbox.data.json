@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "app": {
+    "name": "Busy",
+    "page": "Executive Inbox"
+  },
+  "emails": [
+    {
+      "id": "e-1001",
+      "fromName": "Nadia Holm",
+      "fromEmail": "nadia.holm@northbridge-talent.com",
+      "fromTitle": "Partner, Northbridge Talent",
+      "company": "Stealth (Series C)",
+      "subject": "Confidential: CTO track role — 15 min today?",
+      "preview": "We’re building a platform team and your profile matches the exact leadership shape we need.",
+      "receivedAt": "Today 08:12",
+      "impressive": true,
+      "body": [
+        "Hi —",
+        "I’m reaching out discreetly. A Series C company (Nordics-based, global customers) is forming a new Platform/Infra org and wants someone who can set standards, hire, and ship.",
+        "The CEO asked me to connect directly after seeing your work. If you’re open to a quick call today or tomorrow, I’ll share the compensation band and the context behind the mandate.",
+        "Best,",
+        "Nadia"
+      ]
+    },
+    {
+      "id": "e-1002",
+      "fromName": "Jonas K.",
+      "fromEmail": "jonas.k@founder-mailbox.com",
+      "fromTitle": "CEO",
+      "company": "Arcfield Systems",
+      "subject": "Quick question — would you consider leading engineering?",
+      "preview": "We’re a small team shipping fast. I’d like to talk about a VP Eng mandate with real ownership.",
+      "receivedAt": "Today 09:03",
+      "impressive": true,
+      "body": [
+        "Hi,",
+        "I’ll keep this short. I’m the CEO at Arcfield Systems. We’re at the point where execution needs a dedicated engineering leader who can scale the team while keeping product velocity.",
+        "If you have 20 minutes this week, I’d love to share what we’re building and hear what you’d want from a role like this.",
+        "Regards,",
+        "Jonas"
+      ]
+    },
+    {
+      "id": "e-1003",
+      "fromName": "Lina Berg",
+      "fromEmail": "lina.berg@recruiting-hub.io",
+      "fromTitle": "Executive Recruiter",
+      "company": "Recruiting Hub",
+      "subject": "Senior Frontend Lead — design systems + performance focus",
+      "preview": "You’d own the web platform experience end‑to‑end. Hybrid in Stockholm, flexible.",
+      "receivedAt": "Yesterday 17:46",
+      "impressive": false,
+      "body": [
+        "Hi,",
+        "I’m working with a product company that’s rebuilding their design system and web platform. They need a senior lead who’s pragmatic about UX and fast about delivery.",
+        "Would you be open to a quick intro? If now isn’t ideal, I can circle back later this quarter.",
+        "Thanks,",
+        "Lina"
+      ]
+    },
+    {
+      "id": "e-1004",
+      "fromName": "Ravi Menon",
+      "fromEmail": "ravi@ctonetwork.org",
+      "fromTitle": "CTO",
+      "company": "HelioWorks",
+      "subject": "Your background popped up — can I pitch you something unusual?",
+      "preview": "We’re hiring one senior person to unstick a few gnarly platform problems. Not a big team, high trust.",
+      "receivedAt": "Yesterday 21:11",
+      "impressive": true,
+      "body": [
+        "Hey,",
+        "I’m CTO at HelioWorks. We’re not doing a huge hiring wave — we want one senior builder who can own some “hard but satisfying” platform work.",
+        "If you’re not looking, no worries. If you are, I can share a one‑pager and the comp structure.",
+        "Cheers,",
+        "Ravi"
+      ]
+    },
+    {
+      "id": "e-1005",
+      "fromName": "Ellen Sjöström",
+      "fromEmail": "ellen.sjostrom@executive-search.se",
+      "fromTitle": "Principal",
+      "company": "Executive Search SE",
+      "subject": "Board-intro + advisory track (part-time)",
+      "preview": "A founder is assembling an advisory board and specifically asked for someone with your product/engineering mix.",
+      "receivedAt": "Mon 13:24",
+      "impressive": false,
+      "body": [
+        "Hello,",
+        "I’m running an advisory search for a founder building a B2B platform in the EU market. The ask is part-time, flexible, and focused on product/engineering strategy.",
+        "If this is interesting, I can share the brief and the expected time commitment.",
+        "Kind regards,",
+        "Ellen"
+      ]
+    },
+    {
+      "id": "e-1006",
+      "fromName": "Marcus Lind",
+      "fromEmail": "marcus.lind@talent-outreach.com",
+      "fromTitle": "Talent Outreach",
+      "company": "Talent Outreach",
+      "subject": "Offer: onsite workshop + paid technical assessment",
+      "preview": "We’re trialing a new hiring format that respects senior candidates’ time (and pays for it).",
+      "receivedAt": "Sun 10:02",
+      "impressive": false,
+      "body": [
+        "Hi,",
+        "We’re experimenting with a hiring process that starts with a paid workshop instead of homework. The company is serious about seniority and wants to meet candidates in real collaboration.",
+        "If you want details, I can share the structure and what’s compensated.",
+        "Best,",
+        "Marcus"
+      ]
+    },
+    {
+      "id": "e-1007",
+      "fromName": "Alicia W.",
+      "fromEmail": "alicia.w@headhunt.io",
+      "fromTitle": "Headhunter",
+      "company": "Headhunt.io",
+      "subject": "Relocation package included — principal engineer role",
+      "preview": "If Stockholm isn’t a constraint, there’s a principal IC role with unusually strong autonomy.",
+      "receivedAt": "Sat 18:31",
+      "impressive": true,
+      "body": [
+        "Hi,",
+        "One role that might be relevant: principal engineer (IC) with high autonomy and a relocation package. The team is small but strong, and the scope is broad.",
+        "If you’d like, I’ll send the comp band and the tech stack details.",
+        "Regards,",
+        "Alicia"
+      ]
+    },
+    {
+      "id": "e-1008",
+      "fromName": "Oskar Nyström",
+      "fromEmail": "oskar@founder-note.com",
+      "fromTitle": "Co‑Founder",
+      "company": "Quietly Great AB",
+      "subject": "Not a job pitch (yet) — curious about your preferences",
+      "preview": "I’m mapping roles for the year and want to learn what “good” looks like to you.",
+      "receivedAt": "Fri 09:14",
+      "impressive": false,
+      "body": [
+        "Hi,",
+        "I’m not pitching a role today. I’m trying to understand what strong engineers/leads actually want right now — comp, autonomy, remote, scope, whatever matters.",
+        "If you have 10 minutes, I’d appreciate the perspective.",
+        "Thanks,",
+        "Oskar"
+      ]
+    }
+  ],
+  "replyTemplates": [
+    {
+      "id": "r-1",
+      "label": "Polite + closed",
+      "text": "Thank you for reaching out — I appreciate the note. I’m currently not exploring new opportunities, but I’ll keep your details on file. If my situation changes later in the year, I’ll reconnect.\\n\\nBest regards,\\n"
+    },
+    {
+      "id": "r-2",
+      "label": "Open later this quarter",
+      "text": "Thanks for the message. I’m heads-down right now and not scheduling new conversations, but I can revisit in a few months. If you send the role summary + comp band, I’ll take a quick look when I resurface.\\n\\nRegards,\\n"
+    },
+    {
+      "id": "r-3",
+      "label": "Comp push (professional)",
+      "text": "Thanks — the scope sounds interesting. Based on what you described, I’d only consider it if the compensation reflects the seniority and opportunity cost. If you can share the base range, equity structure, and signing bonus expectations, I’ll respond with a clear yes/no.\\n\\nBest,\\n"
+    },
+    {
+      "id": "r-4",
+      "label": "Workshop / paid process",
+      "text": "Appreciate the outreach. I’m willing to engage when the process is time-respectful. If the company supports a paid workshop or structured paid evaluation, I’m open to a first conversation.\\n\\nBest regards,\\n"
+    },
+    {
+      "id": "r-5",
+      "label": "Redirect to written brief",
+      "text": "Thanks for contacting me. The fastest way for me to evaluate is a written brief: role mandate, team size, reporting line, stack, and compensation band. If you send that, I’ll reply with next steps.\\n\\nRegards,\\n"
+    }
+  ],
+  "assistantToasts": {
+    "open": [
+      "Focused read. Keep your pace.",
+      "Good triage — you’re staying ahead."
+    ],
+    "delete": [
+      "Decisive. Inbox clarity increased.",
+      "Fast call. Less noise, more signal."
+    ],
+    "snooze": [
+      "Deferred with intent. Nice.",
+      "Snoozed. You control the calendar."
+    ],
+    "reply": [
+      "Professional tone locked in.",
+      "Strong boundaries. Clean message."
+    ],
+    "send": [
+      "Sent. Next.",
+      "Reply dispatched. Crisp and calm."
+    ],
+    "inboxZero": [
+      "Inbox zero. Executive energy.",
+      "Clean slate. Maintain the standard."
+    ]
+  }
+}
