@@ -37,3 +37,8 @@ Tip: the PWA service worker caches files. If you change stuff and Chrome keeps o
 - `busy-common.js` – optional shared navigation + tiny helpers (append-only)
 - `sw.js` + `manifest.webmanifest` – PWA basics
 - `pages/*` – your busy pages
+
+
+### Included pages
+- 001 Eternal Spinner
+- 002 Executive Inbox

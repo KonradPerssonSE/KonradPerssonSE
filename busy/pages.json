@@ -1,0 +1,21 @@
+[
+  {
+    "id": "001",
+    "title": "Eternal Spinner",
+    "path": "pages/001-eternal-spinner.html",
+    "tags": [
+      "fidget",
+      "loading"
+    ]
+  },
+  {
+    "id": "002",
+    "title": "Executive Inbox",
+    "path": "pages/002-executive-inbox.html",
+    "tags": [
+      "email",
+      "roleplay",
+      "productivity"
+    ]
+  }
+]
