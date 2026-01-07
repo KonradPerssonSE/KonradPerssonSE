@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Busy · Eternal Spinner</title>
+<link rel="stylesheet" href="../busy-common.css">
+
+<body>
+  <div class="busy-wrap">
+    <nav data-busy-nav></nav>
+
+    <div class="busy-card" style="text-align:center;">
+      <h1 style="margin:0 0 6px 0;font-size:20px;">Eternal Spinner</h1>
+      <p style="margin:0 0 14px 0;color:var(--busy-muted);">Tap to change “productivity mode”.</p>
+
+      <button id="modeBtn" class="busy-btn" type="button" style="font-size:16px;">
+        Looking Busy
+      </button>
+
+      <div style="margin-top:16px;display:grid;place-items:center;">
+        <div id="spinner" style="
+          width:84px;height:84px;border-radius:999px;
+          border: 6px solid rgba(255,255,255,.12);
+          border-top-color: rgba(255,255,255,.85);
+          animation: spin 900ms linear infinite;
+        "></div>
+      </div>
+
+      <p id="hint" style="margin:14px 0 0 0;color:var(--busy-muted);font-size:13px;">
+        Stored locally. No backend. No shame.
+      </p>
+    </div>
+  </div>
+
+  <script src="../busy-common.js" data-busy-root="../"></script>
+  <script>
+    const key = "busy:001:mode";
+    const modes = [
+      { label: "Looking Busy", speed: 900, text: "Steady. Reliable. Probably compiling." },
+      { label: "Deep Work", speed: 520, text: "Serious face. Minimal blinking." },
+      { label: "Incident Response", speed: 260, text: "Something is on fire. It's fine." },
+      { label: "Waiting On Someone", speed: 1400, text: "Refreshing inbox like it’s a sport." }
+    ];
+
+    const spinner = document.getElementById("spinner");
+    const btn = document.getElementById("modeBtn");
+    const hint = document.getElementById("hint");
+
+    function applyMode(i){
+      const m = modes[i % modes.length];
+      btn.textContent = m.label;
+      spinner.style.animationDuration = m.speed + "ms";
+      hint.textContent = m.text + " (saved locally)";
+      localStorage.setItem(key, String(i));
+    }
+
+    let idx = Number(localStorage.getItem(key) || "0");
+    applyMode(idx);
+
+    btn.addEventListener("click", () => {
+      idx = (idx + 1) % modes.length;
+      applyMode(idx);
+    });
+
+    // Tiny keyframe (page-local, no need to pollute common CSS)
+    const style = document.createElement("style");
+    style.textContent = "@keyframes spin{to{transform:rotate(360deg)}}";
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
