@@ -1,421 +1,208 @@
-<!DOCTYPE html>
-<html lang="sv">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner</title>
-    
-    <!-- PWA Settings -->
-    <meta name="theme-color" content="#1a1a1a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/6/63/Icon_Bird_512x512.png"/>
-
-    <!-- Tesseract OCR CDN -->
-    <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
-
-    <!-- Font -->
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&display=swap" rel="stylesheet">
-
-    <style>
-        :root {
-            --bg: #121212;
-            --surface: #1e1e1e;
-            --primary: #00ff41; /* Terminal green */
-            --text: #e0e0e0;
-            --dim: #888;
-            --border: #333;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-        body {
-            font-family: 'IBM Plex Mono', monospace;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        h1 {
-            font-size: 1.2rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            border-bottom: 1px solid var(--primary);
-            padding-bottom: 10px;
-            margin-top: 0;
-            color: var(--primary);
-        }
-
-        /* --- UI Elements --- */
-        .btn {
-            background: transparent;
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            padding: 15px;
-            font-family: inherit;
-            font-size: 1rem;
-            width: 100%;
-            cursor: pointer;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .btn:active {
-            background: var(--primary);
-            color: black;
-            transform: scale(0.98);
-        }
-
-        .btn.secondary {
-            border-color: var(--dim);
-            color: var(--dim);
-            font-size: 0.9rem;
-            padding: 10px;
-        }
-
-        input, textarea {
-            width: 100%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 12px;
-            font-family: inherit;
-            margin-bottom: 10px;
-            font-size: 16px; /* Förhindrar zoom på iOS/Android */
-        }
-
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        label {
-            font-size: 0.75rem;
-            color: var(--dim);
-            margin-bottom: 4px;
-            display: block;
-            text-transform: uppercase;
-        }
-
-        /* --- Sections --- */
-        .section {
-            background: var(--surface);
-            padding: 15px;
-            border: 1px solid var(--border);
-            margin-bottom: 20px;
-            display: none; /* Hidden by default */
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        .section.active { display: block; }
-
-        /* --- Loader --- */
-        #loader {
-            display: none;
-            text-align: center;
-            padding: 20px;
-            color: var(--primary);
-        }
-        .scan-line {
-            height: 2px;
-            background: var(--primary);
-            width: 100%;
-            animation: scan 1.5s infinite alternate;
-        }
-
-        /* --- History List --- */
-        .history-item {
-            padding: 10px;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-        }
-        .history-item:last-child { border-bottom: none; }
-        .history-name { font-weight: bold; }
-        .history-meta { font-size: 0.8rem; color: var(--dim); }
-
-        /* --- Animations --- */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes scan { from { width: 0%; opacity: 0.2; } to { width: 100%; opacity: 1; } }
-        
-        .flash { animation: flashAnim 0.5s; }
-        @keyframes flashAnim { 0% { background-color: var(--primary); } 100% { background-color: transparent; } }
-
-        /* --- Image Preview --- */
-        #image-preview {
-            max-width: 100%;
-            border: 1px dashed var(--dim);
-            margin-bottom: 10px;
-            display: none;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#111111" />
+  <title>Share to Struct</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css" />
 </head>
 <body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="title">Share to Struct</div>
+      <div class="subtitle">Screenshot → OCR → Contact</div>
+    </div>
 
-    <header>
-        <h1>Scan > vCard</h1>
-    </header>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" data-tab="info" role="tab" aria-selected="true">Text from images</button>
+      <button class="tab" data-tab="contacts" role="tab" aria-selected="false">Contacts</button>
+      <button class="tab" data-tab="tool" role="tab" aria-selected="false">Make contact</button>
+    </nav>
+  </header>
 
-    <!-- MAIN MENU -->
-    <div id="view-menu" class="section active">
-        <label for="camera-input" class="btn">
-            📷 Fota Visitkort
-            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;">
+  <main class="wrap">
+    <!-- INFO TAB -->
+    <section class="panel" id="tab-info" role="tabpanel">
+      <h1>Getting text from images on Android</h1>
+      <p>
+        A PWA can’t scan your whole gallery automatically. Android + browsers require you to
+        <em>pick</em> files or <em>share</em> files into the app.
+      </p>
+
+      <h2>Fast paths</h2>
+      <ol>
+        <li><strong>Share sheet:</strong> in Photos/Files → Share → <em>Share to Struct</em> (installed PWA)</li>
+        <li><strong>File picker:</strong> choose one or more screenshots/photos</li>
+        <li><strong>Camera:</strong> capture a contact card / screen on your old phone</li>
+      </ol>
+
+      <h2>How it works (simple mental model)</h2>
+      <ul>
+        <li><strong>OCR:</strong> we turn pixels into text locally (Tesseract.js).</li>
+        <li><strong>Structuring:</strong> we guess fields (name, phone, email…).</li>
+        <li><strong>Review:</strong> you compare image ↔ extracted fields and fix mistakes.</li>
+        <li><strong>Export:</strong> vCard/CSV/JSON for import into your contacts.</li>
+      </ul>
+
+      <h2>Prompt starters (for “structure & clean”)</h2>
+      <div class="prompt">
+        <p><strong>Extract contact JSON</strong></p>
+        <pre><code>You will be given OCR text from a screenshot of a contact.
+Return ONLY JSON with:
+{
+  "firstName": "",
+  "lastName": "",
+  "phones": [{"type":"mobile","value":""}],
+  "emails": [{"type":"work","value":""}],
+  "org": "",
+  "title": "",
+  "note": ""
+}
+Rules: infer best guesses, normalize phone to E.164 if possible, never hallucinate unknown data.</code></pre>
+      </div>
+
+      <div class="prompt">
+        <p><strong>Normalize Swedish/European phones</strong></p>
+        <pre><code>Normalize these phone numbers to E.164 with country=SE if missing.
+Return JSON: {"phones":[...]} only, keep original if uncertain.</code></pre>
+      </div>
+
+      <h2>Roadmap (future “recipes”)</h2>
+      <ul>
+        <li>Events: invite details → iCalendar</li>
+        <li>Places: address snippets → map-ready records</li>
+        <li>Recipes: ingredient lists → structured recipe JSON</li>
+      </ul>
+    </section>
+
+    <!-- CONTACTS TAB -->
+    <section class="panel hidden" id="tab-contacts" role="tabpanel">
+      <h1>Contacts & formats</h1>
+      <p>
+        Internally we store a clean <strong>JSON</strong> record. You can export to
+        <strong>vCard (.vcf)</strong> or <strong>CSV</strong>.
+      </p>
+
+      <div class="row">
+        <button class="btn" id="btn-export-all-vcf">Export all → vCard</button>
+        <button class="btn" id="btn-export-all-csv">Export all → CSV</button>
+        <button class="btn" id="btn-export-all-json">Export all → JSON</button>
+        <button class="btn subtle" id="btn-wipe-db">Delete local DB</button>
+      </div>
+
+      <h2>Saved contacts (local only)</h2>
+      <div id="contacts-list" class="list"></div>
+
+      <h2>Prompt starters (conversion & enrichment)</h2>
+      <div class="prompt">
+        <p><strong>Convert vCard to clean JSON</strong></p>
+        <pre><code>Convert this vCard into JSON with fields:
+firstName, lastName, phones[], emails[], org, title, note.
+Return ONLY JSON. Preserve all phone/email values.</code></pre>
+      </div>
+
+      <div class="prompt">
+        <p><strong>Merge duplicates</strong></p>
+        <pre><code>Given these two contact JSON objects, merge them.
+Prefer the one with more complete name. Combine phones/emails uniquely.
+Return ONLY merged JSON.</code></pre>
+      </div>
+    </section>
+
+    <!-- TOOL TAB -->
+    <section class="panel hidden" id="tab-tool" role="tabpanel">
+      <h1>Make a contact</h1>
+
+      <div class="row">
+        <label class="file">
+          <input id="file-input" type="file" accept="image/*" multiple />
+          <span class="btn">Pick images</span>
         </label>
-        
-        <div id="history-container">
-            <label>Tidigare skanningar</label>
-            <div id="history-list"></div>
+
+        <label class="file">
+          <input id="camera-input" type="file" accept="image/*" capture="environment" />
+          <span class="btn subtle">Camera</span>
+        </label>
+
+        <button class="btn subtle" id="btn-speech">Voice input</button>
+      </div>
+
+      <div class="row">
+        <textarea id="raw-text" placeholder="…or paste/enter text here"></textarea>
+      </div>
+
+      <details class="settings">
+        <summary>Optional AI enhancement (BYO OpenAI key)</summary>
+        <div class="row">
+          <input id="openai-key" type="password" placeholder="OpenAI API key (stored only if you choose)" />
+          <label class="check">
+            <input id="remember-key" type="checkbox" />
+            Remember on this device
+          </label>
         </div>
-    </div>
-
-    <!-- LOADER -->
-    <div id="loader">
-        <div class="scan-line"></div>
-        <p id="status-text">Initierar OCR-motor...</p>
-    </div>
-
-    <!-- EDIT & RESULT VIEW -->
-    <div id="view-result" class="section">
-        <img id="image-preview" alt="Scanned Card">
-        
-        <label>Extraherad Text (Redigera om fel)</label>
-        <textarea id="raw-text" rows="4" placeholder="Rådata från bild..."></textarea>
-        
-        <div style="margin-top: 20px; border-top: 1px dashed var(--dim); padding-top: 10px;">
-            <label>Namn (FN)</label>
-            <input type="text" id="inp-name" placeholder="Förnamn Efternamn">
-            
-            <label>Telefon (TEL)</label>
-            <input type="tel" id="inp-phone" placeholder="+46...">
-            
-            <label>Email (EMAIL)</label>
-            <input type="email" id="inp-email" placeholder="namn@företag.se">
-            
-            <label>Organisation (ORG)</label>
-            <input type="text" id="inp-org" placeholder="Företag AB">
+        <div class="row">
+          <input id="openai-model" type="text" value="gpt-5.2" />
+          <button class="btn subtle" id="btn-test-openai">Test key</button>
         </div>
+        <p class="hint">
+          This step sends OCR text (not the image) to OpenAI to structure/clean fields.
+        </p>
+      </details>
 
-        <button id="btn-save-vcard" class="btn">💾 Skapa & Spara Kontakt</button>
-        <button id="btn-reset" class="btn secondary">⬅ Tillbaka</button>
-    </div>
+      <div class="row">
+        <button class="btn" id="btn-ocr">OCR images → text</button>
+        <button class="btn" id="btn-structure">Text → structured contact</button>
+        <button class="btn subtle" id="btn-save">Save to local contacts</button>
+      </div>
 
-    <script>
-        // ==========================================
-        // STATE & DOM ELEMENTS
-        // ==========================================
-        const els = {
-            input: document.getElementById('camera-input'),
-            viewMenu: document.getElementById('view-menu'),
-            viewResult: document.getElementById('view-result'),
-            loader: document.getElementById('loader'),
-            status: document.getElementById('status-text'),
-            preview: document.getElementById('image-preview'),
-            rawText: document.getElementById('raw-text'),
-            inpName: document.getElementById('inp-name'),
-            inpPhone: document.getElementById('inp-phone'),
-            inpEmail: document.getElementById('inp-email'),
-            inpOrg: document.getElementById('inp-org'),
-            btnSave: document.getElementById('btn-save-vcard'),
-            btnReset: document.getElementById('btn-reset'),
-            historyList: document.getElementById('history-list')
-        };
+      <div id="status" class="status" aria-live="polite"></div>
 
-        // ==========================================
-        // UTILS
-        // ==========================================
-        const vibrate = (ms = 50) => {
-            if (navigator.vibrate) navigator.vibrate(ms);
-        };
+      <div class="compare">
+        <figure class="preview">
+          <img id="img-preview" alt="Selected image preview" />
+          <figcaption>Original (not saved)</figcaption>
+        </figure>
 
-        const showView = (viewName) => {
-            els.viewMenu.classList.remove('active');
-            els.viewResult.classList.remove('active');
-            els.loader.style.display = 'none';
+        <form class="form" id="contact-form">
+          <div class="grid">
+            <label>First name <input id="firstName" autocomplete="given-name"></label>
+            <label>Last name <input id="lastName" autocomplete="family-name"></label>
+          </div>
 
-            if (viewName === 'menu') els.viewMenu.classList.add('active');
-            if (viewName === 'result') els.viewResult.classList.add('active');
-            if (viewName === 'loader') els.loader.style.display = 'block';
-        };
+          <label>Mobile phone <input id="phoneMobile" inputmode="tel" autocomplete="tel"></label>
+          <label>Email <input id="emailMain" inputmode="email" autocomplete="email"></label>
 
-        // ==========================================
-        // OCR LOGIC
-        // ==========================================
-        els.input.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+          <div class="grid">
+            <label>Organization <input id="org"></label>
+            <label>Title <input id="title"></label>
+          </div>
 
-            vibrate(100);
-            showView('loader');
-            
-            // Visa bild
-            els.preview.src = URL.createObjectURL(file);
-            els.preview.style.display = 'block';
+          <label>Note <textarea id="note" rows="4"></textarea></label>
 
-            els.status.innerText = "Läser in bild...";
+          <div class="row">
+            <button type="button" class="btn subtle" id="btn-vcf">Get vCard</button>
+            <button type="button" class="btn subtle" id="btn-csv">Get CSV</button>
+            <button type="button" class="btn subtle" id="btn-json">Get JSON</button>
+            <button type="button" class="btn" id="btn-share">Share…</button>
+          </div>
 
-            try {
-                const result = await Tesseract.recognize(
-                    file,
-                    'swe', // Svenska + Engelska (fallback)
-                    {
-                        logger: m => {
-                            if (m.status === 'recognizing text') {
-                                els.status.innerText = `Läser text: ${(m.progress * 100).toFixed(0)}%`;
-                            }
-                        }
-                    }
-                );
-                
-                vibrate([50, 50, 50]);
-                processOCRResult(result.data.text);
+          <div id="download-area" class="downloads"></div>
+        </form>
+      </div>
 
-            } catch (err) {
-                alert("OCR Misslyckades: " + err);
-                showView('menu');
-            }
-        });
+      <p class="hint">
+        Tip: rotate to landscape for side-by-side comparison.
+      </p>
+    </section>
+  </main>
 
-        function processOCRResult(text) {
-            // 1. Rensa texten lite
-            const cleanText = text.replace(/\n\s*\n/g, '\n');
-            els.rawText.value = cleanText;
-
-            // 2. Enkel Heuristik / Regex för att gissa fält
-            // Email regex
-            const emailMatch = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
-            els.inpEmail.value = emailMatch ? emailMatch[0] : '';
-
-            // Telefon regex (Förenklad, letar efter mönster som liknar nummer)
-            // Tar bort bokstäver, letar efter 7+ siffror i grupp
-            const phoneMatch = text.match(/(\+?(\d[\d-. ]+)?(\([\d-. ]+\))?[\d-. ]+\d)/); 
-            // Varning: Phone regex är svårt på visitkort då det finns org nummer, fax, mob, växel etc.
-            // Vi tar första bästa träff som ser ut som ett nummer > 6 tecken
-            els.inpPhone.value = phoneMatch && phoneMatch[0].length > 6 ? phoneMatch[0].trim() : '';
-
-            // Namn är svårt. Vi gissar att första raden som INTE är en email eller telefon är namnet eller företaget.
-            const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-            // Ta första raden som default namn om den inte innehåller @
-            if (lines.length > 0 && !lines[0].includes('@')) {
-                els.inpName.value = lines[0];
-            } else {
-                els.inpName.value = '';
-            }
-
-            // Gissa org (Andra raden?)
-            if (lines.length > 1 && !lines[1].includes('@')) {
-                els.inpOrg.value = lines[1];
-            }
-
-            showView('result');
-        }
-
-        // ==========================================
-        // VCARD & STORAGE LOGIC
-        // ==========================================
-        els.btnSave.addEventListener('click', () => {
-            vibrate();
-
-            const contact = {
-                fn: els.inpName.value || 'Okänd',
-                tel: els.inpPhone.value || '',
-                email: els.inpEmail.value || '',
-                org: els.inpOrg.value || ''
-            };
-
-            // 1. Generera vCard Blob
-            const vcardBody = [
-                'BEGIN:VCARD',
-                'VERSION:3.0',
-                `FN:${contact.fn}`,
-                `N:;${contact.fn};;;`,
-                `ORG:${contact.org}`,
-                `TEL;TYPE=CELL:${contact.tel}`,
-                `EMAIL:${contact.email}`,
-                'END:VCARD'
-            ].join('\n');
-
-            const blob = new Blob([vcardBody], { type: 'text/vcard;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-
-            // 2. Trigga nedladdning
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${contact.fn.replace(/ /g, '_')}.vcf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // 3. Spara till localstorage historik
-            saveToHistory(contact);
-        });
-
-        els.btnReset.addEventListener('click', () => {
-            vibrate();
-            showView('menu');
-            els.input.value = ''; // Reset input file
-        });
-
-        // ==========================================
-        // LOCALSTORAGE HISTORY
-        // ==========================================
-        function saveToHistory(contact) {
-            const history = JSON.parse(localStorage.getItem('ocr_vcard_history') || '[]');
-            history.unshift(contact);
-            // Spara max 10
-            if (history.length > 10) history.pop();
-            localStorage.setItem('ocr_vcard_history', JSON.stringify(history));
-            renderHistory();
-        }
-
-        function renderHistory() {
-            const history = JSON.parse(localStorage.getItem('ocr_vcard_history') || '[]');
-            els.historyList.innerHTML = '';
-
-            if (history.length === 0) {
-                els.historyList.innerHTML = '<div style="color:var(--dim); font-size:0.8rem; padding:10px;">Ingen historik än.</div>';
-                return;
-            }
-
-            history.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'history-item';
-                div.innerHTML = `
-                    <div class="history-name">${item.fn}</div>
-                    <div class="history-meta">${item.org || ''}</div>
-                `;
-                div.onclick = () => {
-                    // Ladda tillbaka in i fälten
-                    vibrate();
-                    els.inpName.value = item.fn;
-                    els.inpPhone.value = item.tel;
-                    els.inpEmail.value = item.email;
-                    els.inpOrg.value = item.org;
-                    els.rawText.value = "Hämtad från historik.";
-                    els.preview.style.display = 'none';
-                    showView('result');
-                };
-                els.historyList.appendChild(div);
-            });
-        }
-
-        // Init
-        renderHistory();
-
-        // Workaround för att "copy" ska fungera manuellt
-        els.rawText.addEventListener('click', function() {
-            this.select();
-        });
-
-    </script>
+  <!-- Tesseract.js (CDN) -->
+  <script src="https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
