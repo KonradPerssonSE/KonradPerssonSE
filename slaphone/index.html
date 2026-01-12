@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="sv-SE">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>SLAPHONE — gör en gammal iPhone användbar</title>
+
+  <!-- IBM Plex Mono (single font, everywhere) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg: #0b0b0c;
+      --fg: #f3f3f4;
+      --muted: #b7b7bb;
+      --line: rgba(255,255,255,.12);
+      --card: rgba(255,255,255,.04);
+      --accent: #f3f3f4;
+      --ok: rgba(120,255,180,.16);
+      --warn: rgba(255,220,120,.16);
+      --bad: rgba(255,120,120,.16);
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+      --r: 14px;
+      --pad: 14px;
+      --max: 980px;
+    }
+
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #fbfbfc;
+        --fg: #0b0b0c;
+        --muted: #3f3f44;
+        --line: rgba(0,0,0,.12);
+        --card: rgba(0,0,0,.03);
+        --accent: #0b0b0c;
+        --shadow: 0 12px 30px rgba(0,0,0,.08);
+      }
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:14px;
+      line-height:1.45;
+      letter-spacing:.1px;
+    }
+
+    a{ color:inherit; text-underline-offset: 3px; }
+    a:hover{ opacity:.9; }
+
+    .wrap{
+      max-width:var(--max);
+      margin:0 auto;
+      padding:18px 14px 56px;
+    }
+
+    header{
+      padding:16px 0 6px;
+      border-bottom:1px solid var(--line);
+      margin-bottom:16px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .title{
+      font-weight:600;
+      font-size:18px;
+      letter-spacing:.4px;
+    }
+
+    .subtitle{
+      margin-top:6px;
+      color:var(--muted);
+      max-width: 72ch;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:var(--card);
+      white-space:nowrap;
+      box-shadow: var(--shadow);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+      margin-top:14px;
+    }
+
+    @media (min-width: 860px){
+      .grid{ grid-template-columns: 1.1fr .9fr; }
+    }
+
+    section{
+      border:1px solid var(--line);
+      background:var(--card);
+      border-radius:var(--r);
+      padding:var(--pad);
+      box-shadow: var(--shadow);
+    }
+
+    h2{
+      margin:0 0 10px;
+      font-size:14px;
+      font-weight:600;
+      letter-spacing:.2px;
+    }
+
+    p{ margin:10px 0; color:var(--fg); }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size:12px; color:var(--muted); }
+
+    ul{ margin:10px 0; padding-left:18px; color:var(--fg); }
+    li{ margin:6px 0; }
+
+    .pricebox{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:space-between;
+      border-top:1px solid var(--line);
+      padding-top:12px;
+      margin-top:12px;
+    }
+
+    .price{
+      font-size:18px;
+      font-weight:600;
+      letter-spacing:.2px;
+    }
+
+    .tag{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:var(--card);
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    /* Tables (mobile-first) */
+    .table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:10px;
+    }
+    .table th, .table td{
+      border-top:1px solid var(--line);
+      padding:10px 8px;
+      vertical-align:top;
+      text-align:left;
+    }
+    .table th{
+      font-weight:600;
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.6px;
+    }
+
+    /* Make tables readable on small screens */
+    @media (max-width: 640px){
+      .table thead{ display:none; }
+      .table, .table tbody, .table tr, .table td{ display:block; width:100%; }
+      .table tr{
+        border-top:1px solid var(--line);
+        padding:8px 0;
+      }
+      .table td{
+        border:none;
+        padding:6px 0;
+      }
+      .table td[data-label]::before{
+        content: attr(data-label) ": ";
+        color: var(--muted);
+      }
+    }
+
+    .callout{
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      padding:10px 12px;
+      background: rgba(255,255,255,.02);
+      margin-top:10px;
+    }
+    .ok{ background: var(--ok); }
+    .warn{ background: var(--warn); }
+    .bad{ background: var(--bad); }
+
+    .form{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    @media (min-width: 640px){
+      .form.two{ grid-template-columns: 1fr 1fr; }
+    }
+
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin:0 0 6px;
+    }
+    input, select, textarea{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: transparent;
+      color: var(--fg);
+      outline:none;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    textarea{ min-height: 92px; resize: vertical; }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background: transparent;
+      color: var(--fg);
+      padding:10px 12px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      cursor:pointer;
+    }
+    .btn:hover{ opacity:.92; }
+    .btn.primary{
+      background: var(--fg);
+      color: var(--bg);
+      border-color: transparent;
+    }
+
+    .summary{
+      white-space: pre-wrap;
+      font-size:12px;
+      border:1px dashed var(--line);
+      border-radius: 12px;
+      padding:10px 12px;
+      background: rgba(0,0,0,.12);
+      margin-top:10px;
+    }
+
+    footer{
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .adminToggle{
+      color: var(--muted);
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .adminToggle:hover{ color: var(--fg); }
+
+    .hidden{ display:none !important; }
+
+    .hr{ height:1px; background:var(--line); margin:12px 0; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div>
+          <div class="title">SLAPHONE</div>
+          <div class="subtitle">
+            Gör en gammal iPhone användbar igen: samtal + SMS + kamera + offline media.
+            <span class="muted">Fakta först, minimalt, inga överraskningar.</span>
+          </div>
+        </div>
+        <div class="pill" title="Baspris för tjänsten (hårdvara tillkommer)">
+          <span class="tag">Tjänst</span>
+          <span><strong>500 SEK</strong> för “clean + dumb setup”</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section>
+        <h2>Vad tjänsten gör</h2>
+        <ul>
+          <li>Rensar och förbereder din gamla iPhone som “dumb phone”: <strong>samtal, SMS, kamera</strong> + valfria offline-appar.</li>
+          <li>Tar bort kopplingar så enheten är enkel att återställa och använda igen.</li>
+          <li>Valfri hårdvara: <strong>batteripack</strong>, <strong>SD/microSD</strong> eller <strong>M.2 NVMe</strong> för filöverföring/backup.</li>
+        </ul>
+
+        <div class="callout warn">
+          <strong>Viktigt:</strong> iPhone 8 (Lightning) är <em>USB-2</em> i praktiken. Det betyder att externa lagringslösningar kan vara snabba på datorn,
+          men <strong>telefonens port blir flaskhals</strong> vid kopiering.
+        </div>
+
+        <div class="pricebox">
+          <div>
+            <div class="tag">Bas</div>
+            <p class="muted tiny">Inkluderar: fabriksåterställning, uppdatering (inom stöd), minimering av bakgrund, inställningar, test av SMS/samtal/kamera.</p>
+          </div>
+          <div class="price">500 SEK</div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Passar bra för</h2>
+        <ul>
+          <li>Reservtelefon / “offline phone”</li>
+          <li>Kamera + enkel kommunikation</li>
+          <li>MP3 + PDF/EPUB offline</li>
+          <li>Fotoexport till dator via SD eller SSD-bridge</li>
+        </ul>
+
+        <div class="callout ok">
+          <strong>Rekommenderad app-bas (offline):</strong>
+          <div class="tiny">Music (eller VLC), Books, Camera, Photos, Messages, Phone.</div>
+        </div>
+
+        <div class="callout">
+          <strong>Vad vi inte gör:</strong>
+          <div class="tiny">Ingen moln-magi, inga konton krävs efter leverans (om du inte vill). Ingen backend här på sidan; ordern är statisk.</div>
+        </div>
+      </section>
+    </div>
+
+    <section style="margin-top:12px;">
+      <h2>Alternativ: SD/microSD vs M.2 NVMe vs batteripack</h2>
+      <div class="tiny muted">
+        *Hårdvara prissätts separat (”till självkostnad”) och kan variera med märke/modell. Tabellen jämför funktion och praktisk användning.
+      </div>
+
+      <table class="table" aria-label="Jämförelse av alternativ">
+        <thead>
+          <tr>
+            <th>Alternativ</th>
+            <th>Styrkor</th>
+            <th>Begränsningar</th>
+            <th>Passar bäst när</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Alternativ"><strong>SD/microSD</strong><br><span class="tiny muted">kort + adapter/reader</span></td>
+            <td data-label="Styrkor">
+              Billigt per setup<br>
+              Smidigt med digitalkamera (SD/microSD)<br>
+              Enkelt att flytta filer mellan enheter
+            </td>
+            <td data-label="Begränsningar">
+              Lätt att tappa kort<br>
+              Inte “snabbast”, men tillräckligt för foto<br>
+              Telefonen kan fortfarande vara USB-2-flaskhals
+            </td>
+            <td data-label="Passar bäst när">
+              Du jobbar med kamera-SD ofta<br>
+              Du vill ha billig, flexibel backup/transfer
+            </td>
+          </tr>
+
+          <tr>
+            <td data-label="Alternativ"><strong>M.2 NVMe</strong><br><span class="tiny muted">SSD + enclosure</span></td>
+            <td data-label="Styrkor">
+              Extremt snabb på dator (USB-C 10Gbps+)<br>
+              Robust “framtidsdisk” (1–2TB+)<br>
+              Bra som enda portabla arbetsdisk
+            </td>
+            <td data-label="Begränsningar">
+              Dyrare totalpaket<br>
+              På iPhone 8 blir hastigheten ändå begränsad<br>
+              Kan kräva extra ström vid direktanslutning
+            </td>
+            <td data-label="Passar bäst när">
+              Du vill ha en seriös portabel SSD för datorn<br>
+              Du vill redigera stora fotobibliotek direkt från disk
+            </td>
+          </tr>
+
+          <tr>
+            <td data-label="Alternativ"><strong>Batteripack</strong><br><span class="tiny muted">5000/10000/20000 mAh</span></td>
+            <td data-label="Styrkor">
+              Förlänger “dumbphone” livslängd rejält<br>
+              Hjälper även externa tillbehör med ström (via rätt adapter)
+            </td>
+            <td data-label="Begränsningar">
+              Extra pryl att bära<br>
+              Löser inte filhastighet, bara driftstid
+            </td>
+            <td data-label="Passar bäst när">
+              Du vill ha lång batteritid och enkelhet<br>
+              Du tar mycket foto/telefon/sms på språng
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section style="margin-top:12px;">
+      <h2>Beställning (statisk)</h2>
+      <p class="muted">Fyll i, så genererar sidan en sammanfattning du kan kopiera eller mejla. Ingen data skickas automatiskt.</p>
+
+      <div class="form two">
+        <div>
+          <label for="name">Namn</label>
+          <input id="name" autocomplete="name" placeholder="För- och efternamn">
+        </div>
+        <div>
+          <label for="email">E-post</label>
+          <input id="email" type="email" autocomplete="email" placeholder="namn@domän.se">
+        </div>
+        <div>
+          <label for="phone">Telefon</label>
+          <input id="phone" autocomplete="tel" placeholder="+46...">
+        </div>
+        <div>
+          <label for="model">Enhet</label>
+          <select id="model">
+            <option value="iPhone 8">iPhone 8</option>
+            <option value="iPhone 7/7 Plus">iPhone 7/7 Plus</option>
+            <option value="iPhone SE (1st gen)">iPhone SE (1st gen)</option>
+            <option value="Other">Annat (skriv i notering)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="form">
+        <div>
+          <label>Bas-tjänst</label>
+          <div class="row">
+            <span class="tag">Obligatorisk</span>
+            <span><strong>SLAPHONE Clean + Dumb Setup — 500 SEK</strong></span>
+          </div>
+          <div class="tiny muted">Rensning + minimal setup + test (samtal/SMS/kamera) + enkel offline-konfiguration.</div>
+        </div>
+
+        <div>
+          <label>Tillägg: batteripack</label>
+          <select id="battery">
+            <option value="None">Inget</option>
+            <option value="5000 mAh">5000 mAh</option>
+            <option value="10000 mAh">10000 mAh</option>
+            <option value="20000 mAh">20000 mAh</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Tillägg: lagring/transfer</label>
+          <select id="storage">
+            <option value="None">Inget</option>
+            <option value="SD/microSD bundle">SD/microSD bundle (kort + reader/adapter)</option>
+            <option value="M.2 NVMe bundle">M.2 NVMe bundle (SSD + enclosure + nödvändiga adaptrar)</option>
+          </select>
+          <div class="tiny muted">Hårdvara prissätts separat (självkostnad). Vi specificerar exakt modell i order-sammanfattningen.</div>
+        </div>
+
+        <div class="form two">
+          <div>
+            <label for="apps">Offline-appar (valfritt)</label>
+            <select id="apps">
+              <option value="Default minimal (Music/Books + core apps)">Default minimal (Music/Books + kärnappar)</option>
+              <option value="VLC + Books">VLC + Books</option>
+              <option value="Customer provided list">Egen lista (skriv i notering)</option>
+            </select>
+          </div>
+          <div>
+            <label for="sim">SIM</label>
+            <select id="sim">
+              <option value="Keep current SIM">Behåll nuvarande SIM i enheten</option>
+              <option value="Move SIM (customer notes)">Flytta SIM (enligt notering)</option>
+              <option value="No SIM">Ingen SIM</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="notes">Notering (t.ex. “adapter jag köpt”, kortstorlek, datorportar, leveranskrav)</label>
+          <textarea id="notes" placeholder="Skriv kort och konkret..."></textarea>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" id="build">Skapa ordersammanfattning</button>
+          <button class="btn" id="copy" disabled>Kopiera</button>
+          <button class="btn" id="mailto" disabled>Mejla</button>
+        </div>
+
+        <div id="summary" class="summary hidden" aria-live="polite"></div>
+
+        <div class="tiny muted">
+          Tips: om du vill ha en ungefärlig hårdvarukostnad, skriv “budgettak” i noteringen så matchar vi på inköpspris (kvitto).
+        </div>
+      </div>
+    </section>
+
+    <!-- Admin / employee instructions (hidden) -->
+    <section id="admin" class="hidden" style="margin-top:12px;">
+      <h2>Admin / intern instruktion (anställda)</h2>
+      <div class="callout bad tiny">
+        Detta är en klient-side “toggle”. Det är <strong>inte</strong> ett säkerhetssystem.
+        Byt PIN i koden innan du använder sidan skarpt.
+      </div>
+
+      <h3 class="tiny" style="margin-top:12px; font-weight:600; color:var(--fg);">Checklista: SLAPHONE Clean + Dumb Setup (500 SEK)</h3>
+      <ol class="tiny" style="margin:10px 0 0; padding-left:18px;">
+        <li><strong>Intag</strong>: notera modell, lagring, iOS-version, skärm/batteristatus, SIM-typ, kundens mål (SMS/samtal/kamera/offline).</li>
+        <li><strong>Apple ID / Find My</strong>: be kunden logga ut / stäng av “Hitta” vid behov. Målet: enheten ska vara enkel att återställa senare.</li>
+        <li><strong>Radera</strong>: Fabriksåterställ (Settings → General → Transfer or Reset → Erase). Sätt upp som <strong>Ny iPhone</strong> (inte backup).</li>
+        <li><strong>Uppdatera</strong>: uppdatera till senaste iOS som stöds för modellen (om möjligt) på Wi-Fi.</li>
+        <li><strong>Dumb-inställningar</strong> (minimera lagg & bakgrund):
+          <ul>
+            <li>Stäng av Background App Refresh, Location Services (om ej behövs), Auto-Updates, Analytics, Siri suggestions.</li>
+            <li>Stäng av iMessage/FaceTime om kunden vill ha “ren SMS/telefoni”.</li>
+            <li>Aktivera Reduce Motion / Reduce Transparency om kunden vill.</li>
+            <li>Aktivera Screen Time → blockera App Store-installation (valfritt, men rekommenderat).</li>
+          </ul>
+        </li>
+        <li><strong>Offline-appar</strong>: installera bara det som beställts (t.ex. Books + VLC). Ladda test-PDF/MP3 om kunden vill.</li>
+        <li><strong>Test</strong>:
+          <ul>
+            <li>Samtal in/ut, SMS in/ut, kamera tar bild, Photos öppnar, lagring ok.</li>
+            <li>Om SIM ska flyttas: verifiera operatör/täckning och VoLTE-läge om tillgängligt.</li>
+          </ul>
+        </li>
+        <li><strong>Hårdvara-tillägg</strong>:
+          <ul>
+            <li><strong>SD/microSD</strong>: formatera exFAT, snabbtest läs/skriv på dator. Verifiera med kundens adapter.</li>
+            <li><strong>M.2 NVMe</strong>: montera SSD i enclosure, formatera exFAT (single partition). Test på Windows + Mac/Linux om möjligt.</li>
+            <li><strong>Batteripack</strong>: kontrollera laddning, kabeltyp, och att det kan ladda iPhone stabilt.</li>
+          </ul>
+        </li>
+        <li><strong>Leverans</strong>: visa kunden “så här kopierar du foton” (kundens val: SD-flöde eller dator-import). Dokumentera i ordertexten.</li>
+      </ol>
+
+      <div class="hr"></div>
+
+      <h3 class="tiny" style="margin:0; font-weight:600; color:var(--fg);">Noteringar / kända constraints</h3>
+      <ul class="tiny">
+        <li>Lightning på iPhone 8 är praktiskt USB-2 → ingen NVMe-hastighet vid telefonkopiering, men SSD är snabb på dator.</li>
+        <li>Externa lagringsenheter kan kräva extra ström via adapter/hubb (särskilt SSD).</li>
+        <li>SD-flöde är oftast enklast för kamera-folk. NVMe-flöde är bäst som “one portable work disk”.</li>
+      </ul>
+
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" id="adminHide">Dölj admin</button>
+      </div>
+    </section>
+
+    <footer>
+      <div class="tiny muted">
+        SLAPHONE — minimalt. fakta. fungerande.
+      </div>
+      <div class="adminToggle" id="adminToggle" role="button" tabindex="0" aria-label="Öppna admin-läge">
+        admin
+      </div>
+    </footer>
+  </div>
+
+  <script>
+   // === CONFIG ===
+    // Change this PIN before real use. Client-side only; not secure.
+    const ADMIN_PIN = "1234";
+
+    // Where orders should go (mailto). Replace with your real intake address.
+    const ORDER_EMAIL = "orders@example.com";
+
+    // === HELPERS ===
+    const $ = (id) => document.getElementById(id);
+
+    function clean(v){ return (v || "").toString().trim(); }
+
+    function buildSummary(){
+      const name = clean($("name").value);
+      const email = clean($("email").value);
+      const phone = clean($("phone").value);
+      const model = $("model").value;
+      const battery = $("battery").value;
+      const storage = $("storage").value;
+      const apps = $("apps").value;
+      const sim = $("sim").value;
+      const notes = clean($("notes").value);
+
+      const lines = [
+        "SLAPHONE ORDER",
+        "----------------",
+        `Customer: ${name || "(not set)"}`,
+        `Email: ${email || "(not set)"}`,
+        `Phone: ${phone || "(not set)"}`,
+        "",
+        `Device: ${model}`,
+        "",
+        "Service:",
+        "- SLAPHONE Clean + Dumb Setup — 500 SEK",
+        "",
+        "Add-ons:",
+        `- Battery pack: ${battery}`,
+        `- Storage/transfer: ${storage}`,
+        "",
+        "Preferences:",
+        `- Offline apps: ${apps}`,
+        `- SIM: ${sim}`,
+        "",
+        "Notes:",
+        notes ? notes : "(none)",
+        "",
+        "Acknowledgements:",
+        "- Hardware priced separately (at cost) unless otherwise agreed.",
+        "- Lightning iPhone 8 is USB-2 in practice; transfers are limited by the phone port.",
+        ""
+      ];
+
+      return lines.join("\n");
+    }
+
+    function updateSummaryUI(text){
+      const box = $("summary");
+      box.textContent = text;
+      box.classList.remove("hidden");
+      $("copy").disabled = false;
+      $("mailto").disabled = false;
+    }
+
+    function copyToClipboard(text){
+      navigator.clipboard.writeText(text).catch(() => {
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      });
+    }
+
+    function makeMailto(text){
+      const subject = encodeURIComponent("SLAPHONE order");
+      const body = encodeURIComponent(text);
+      return `mailto:${encodeURIComponent(ORDER_EMAIL)}?subject=${subject}&body=${body}`;
+    }
+
+    // === ORDER FORM EVENTS ===
+    $("build").addEventListener("click", (e) => {
+      e.preventDefault();
+      updateSummaryUI(buildSummary());
+    });
+
+    $("copy").addEventListener("click", (e) => {
+      e.preventDefault();
+      const text = $("summary").classList.contains("hidden") ? buildSummary() : $("summary").textContent;
+      copyToClipboard(text);
+      $("copy").textContent = "Kopierad";
+      setTimeout(() => $("copy").textContent = "Kopiera", 1000);
+    });
+
+    $("mailto").addEventListener("click", (e) => {
+      e.preventDefault();
+      const text = $("summary").classList.contains("hidden") ? buildSummary() : $("summary").textContent;
+      window.location.href = makeMailto(text);
+    });
+
+    // === ADMIN TOGGLE ===
+    function openAdmin(){
+      const pin = prompt("Admin PIN:");
+      if (pin === null) return;
+      if (pin === ADMIN_PIN){
+        $("admin").classList.remove("hidden");
+        localStorage.setItem("slaphone_admin", "1");
+        // scroll into view
+        $("admin").scrollIntoView({behavior:"smooth", block:"start"});
+      } else {
+        alert("Fel PIN.");
+      }
+    }
+
+    function closeAdmin(){
+      $("admin").classList.add("hidden");
+      localStorage.removeItem("slaphone_admin");
+    }
+
+    $("adminToggle").addEventListener("click", openAdmin);
+    $("adminToggle").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") openAdmin();
+    });
+    $("adminHide").addEventListener("click", closeAdmin);
+
+    // Persist admin view (optional convenience)
+    if (localStorage.getItem("slaphone_admin") === "1"){
+      $("admin").classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>
