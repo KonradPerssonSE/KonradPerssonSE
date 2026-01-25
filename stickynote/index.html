@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sticky Markdown Todos (v1)</title>
+
+  <style>
+    :root{
+      /* Theme tokens (edit these; everything derives from vars) */
+      --sn-font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --sn-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+      --sn-gap: 14px;
+      --sn-radius: 18px;
+      --sn-stroke: 1px;
+
+      --sn-page-bg: color-mix(in oklab, Canvas 92%, oklch(98% 0.01 100) 8%);
+      --sn-ink: color-mix(in oklab, CanvasText 92%, oklch(20% 0.01 250) 8%);
+
+      --sn-card-paper: oklch(97% 0.03 95);
+      --sn-card-stroke: color-mix(in oklab, var(--sn-ink) 14%, transparent);
+      --sn-shadow: 0 18px 40px color-mix(in oklab, var(--sn-ink) 12%, transparent);
+
+      --sn-pill-bg: color-mix(in oklab, var(--sn-ink) 8%, transparent);
+      --sn-pill-stroke: color-mix(in oklab, var(--sn-ink) 14%, transparent);
+
+      --sn-focus: oklch(72% 0.15 255);
+
+      --sn-btn-bg: color-mix(in oklab, var(--sn-ink) 8%, transparent);
+      --sn-btn-stroke: color-mix(in oklab, var(--sn-ink) 16%, transparent);
+
+      --sn-muted: color-mix(in oklab, var(--sn-ink) 70%, transparent);
+    }
+
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sn-font);
+      background: var(--sn-page-bg);
+      color: var(--sn-ink);
+    }
+
+    .sn-app{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: var(--sn-gap);
+    }
+
+    .sn-header{
+      display:flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sn-title{
+      font-size: 18px;
+      letter-spacing: 0.2px;
+      margin:0;
+    }
+
+    .sn-toolbar{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items:center;
+    }
+
+    .sn-btn{
+      appearance: none;
+      border: var(--sn-stroke) solid var(--sn-btn-stroke);
+      background: var(--sn-btn-bg);
+      color: var(--sn-ink);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+      user-select: none;
+    }
+    .sn-btn:hover{ filter: brightness(0.98); }
+    .sn-btn:active{ transform: translateY(1px); }
+    .sn-btn:focus-visible{
+      outline: 3px solid color-mix(in oklab, var(--sn-focus) 60%, transparent);
+      outline-offset: 2px;
+    }
+
+    details.sn-panel{
+      border: var(--sn-stroke) solid var(--sn-card-stroke);
+      border-radius: var(--sn-radius);
+      background: color-mix(in oklab, var(--sn-card-paper) 65%, transparent);
+      padding: 10px 12px;
+      box-shadow: 0 10px 24px color-mix(in oklab, var(--sn-ink) 10%, transparent);
+    }
+
+    details.sn-panel > summary{
+      cursor: pointer;
+      font-weight: 600;
+      user-select: none;
+      list-style: none;
+    }
+    details.sn-panel > summary::-webkit-details-marker{ display:none; }
+
+    .sn-io{
+      margin-top: 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    textarea.sn-textarea{
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      border-radius: 14px;
+      border: var(--sn-stroke) solid var(--sn-card-stroke);
+      background: color-mix(in oklab, var(--sn-card-paper) 85%, white 15%);
+      color: var(--sn-ink);
+      padding: 10px 12px;
+      font-family: var(--sn-mono);
+      font-size: 12.5px;
+      line-height: 1.35;
+      box-sizing: border-box;
+    }
+    textarea.sn-textarea:focus-visible{
+      outline: 3px solid color-mix(in oklab, var(--sn-focus) 55%, transparent);
+      outline-offset: 2px;
+    }
+
+    .sn-row{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items:center;
+    }
+
+    .sn-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--sn-gap);
+      align-items: start;
+    }
+
+    /* NOTE CARD = <span> */
+    span.sn-card{
+      display:block;
+
+      /* per-card CSS vars can be set inline: --sn-hue */
+      --sn-hue: 55;
+      --sn-accent: oklch(76% 0.16 var(--sn-hue));
+
+      border: var(--sn-stroke) solid var(--sn-card-stroke);
+      border-radius: var(--sn-radius);
+      background:
+        linear-gradient(
+          135deg,
+          color-mix(in oklab, var(--sn-card-paper) 86%, var(--sn-accent) 14%),
+          color-mix(in oklab, var(--sn-card-paper) 92%, white 8%)
+        );
+      box-shadow: var(--sn-shadow);
+      padding: 12px 12px 10px 12px;
+      position: relative;
+      overflow: clip;
+    }
+
+    span.sn-card::before{
+      content:"";
+      position:absolute;
+      inset: -40px -60px auto auto;
+      width: 160px;
+      height: 160px;
+      background: radial-gradient(circle at 30% 30%,
+        color-mix(in oklab, var(--sn-accent) 35%, transparent),
+        transparent 60%);
+      transform: rotate(10deg);
+      pointer-events:none;
+      opacity: 0.9;
+    }
+
+    .sn-top{
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+    }
+
+    input.sn-check{
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      accent-color: color-mix(in oklab, var(--sn-accent) 80%, black 20%);
+      flex: 0 0 auto;
+      cursor:pointer;
+    }
+
+    span.sn-text[contenteditable]{
+      display:block;
+      min-width: 0;
+      flex: 1 1 auto;
+      font-weight: 650;
+      line-height: 1.2;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 10px;
+      padding: 2px 6px;
+    }
+
+    span.sn-text[contenteditable]:focus{
+      outline: 2px solid color-mix(in oklab, var(--sn-focus) 55%, transparent);
+      outline-offset: 2px;
+      background: color-mix(in oklab, white 45%, transparent);
+    }
+
+    .sn-kebab{
+      appearance:none;
+      border: var(--sn-stroke) solid var(--sn-btn-stroke);
+      background: color-mix(in oklab, white 35%, transparent);
+      color: var(--sn-ink);
+      border-radius: 12px;
+      padding: 6px 10px;
+      cursor:pointer;
+      flex: 0 0 auto;
+    }
+
+    .sn-meta{
+      margin-top: 8px;
+      display:flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items:center;
+    }
+
+    span.sn-pill{
+      display:inline-flex;
+      align-items:center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: var(--sn-stroke) solid var(--sn-pill-stroke);
+      background: var(--sn-pill-bg);
+    }
+
+    span.sn-pill.sn-due{
+      background: color-mix(in oklab, var(--sn-accent) 14%, transparent);
+      border-color: color-mix(in oklab, var(--sn-accent) 28%, transparent);
+    }
+
+    .sn-subtasks{
+      margin-top: 10px;
+      display:grid;
+      gap: 6px;
+    }
+
+    /* SUBTASK ROWS are also <span> blocks */
+    span.sn-sub{
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      padding-left: calc(var(--sn-indent, 0) * 14px);
+    }
+
+    span.sn-sub span.sn-text{
+      font-weight: 520;
+    }
+
+    /* Checked styling using :has (Chrome-only is fine) */
+    span.sn-card:has(input.sn-check:checked) span.sn-text{
+      text-decoration: line-through;
+      color: color-mix(in oklab, var(--sn-ink) 65%, transparent);
+    }
+    span.sn-sub:has(input.sn-check:checked) span.sn-text{
+      text-decoration: line-through;
+      color: color-mix(in oklab, var(--sn-ink) 65%, transparent);
+    }
+
+    .sn-details{
+      margin-top: 10px;
+      display:grid;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: var(--sn-stroke) dashed color-mix(in oklab, var(--sn-ink) 18%, transparent);
+    }
+
+    .sn-details[hidden]{ display:none !important; }
+
+    .sn-field{
+      display:grid;
+      gap: 6px;
+    }
+    .sn-field label{
+      font-size: 12px;
+      color: var(--sn-muted);
+      font-weight: 650;
+    }
+    .sn-field input, .sn-field textarea{
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 12px;
+      border: var(--sn-stroke) solid var(--sn-card-stroke);
+      background: color-mix(in oklab, white 40%, transparent);
+      color: var(--sn-ink);
+      padding: 8px 10px;
+      font: inherit;
+    }
+    .sn-field textarea{
+      min-height: 70px;
+      font-family: var(--sn-mono);
+      font-size: 12.5px;
+      line-height: 1.35;
+      resize: vertical;
+    }
+
+    .sn-sys{
+      font-family: var(--sn-mono);
+      font-size: 11px;
+      color: color-mix(in oklab, var(--sn-ink) 65%, transparent);
+      display:grid;
+      gap: 4px;
+    }
+
+    .sn-footer{
+      color: color-mix(in oklab, var(--sn-ink) 70%, transparent);
+      font-size: 12px;
+      padding: 6px 2px 14px 2px;
+    }
+
+    .sn-toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: color-mix(in oklab, var(--sn-ink) 85%, black 15%);
+      color: white;
+      padding: 10px 12px;
+      border-radius: 999px;
+      box-shadow: 0 14px 34px color-mix(in oklab, black 30%, transparent);
+      font-size: 12.5px;
+      z-index: 9999;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="sn-app">
+    <header class="sn-header">
+      <h1 class="sn-title">Sticky Markdown Todos (v1)</h1>
+      <div class="sn-toolbar">
+        <button class="sn-btn" id="addRootBtn">+ Note</button>
+        <button class="sn-btn" id="exportJsonBtn">Export JSON → Box</button>
+        <button class="sn-btn" id="copyJsonBtn">Copy JSON</button>
+        <button class="sn-btn" id="copyHtmlBtn">Copy Notes HTML</button>
+        <button class="sn-btn" id="clearBtn">Clear Storage</button>
+      </div>
+    </header>
+
+    <details class="sn-panel" open>
+      <summary>Import Markdown (forgiving)</summary>
+      <div class="sn-io">
+        <textarea class="sn-textarea" id="mdInput" spellcheck="false"
+          placeholder="-[ ] Ship feature due:2026-02-01 14:00 @alex #work
+  - [ ] sub step 1
+  - [ ] sub step 2
+
+Or: buy milk, - [x] pay invoice #finance"></textarea>
+        <div class="sn-row">
+          <button class="sn-btn" id="importReplaceBtn">Import (Replace)</button>
+          <button class="sn-btn" id="importAppendBtn">Import (Append)</button>
+          <button class="sn-btn" id="loadSampleBtn">Load sample</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="sn-panel">
+      <summary>JSON I/O box (paste/import/export)</summary>
+      <div class="sn-io">
+        <textarea class="sn-textarea" id="ioBox" spellcheck="false"
+          placeholder="Exported JSON will appear here. You can also paste JSON here and import it."></textarea>
+        <div class="sn-row">
+          <button class="sn-btn" id="importJsonBtn">Import JSON (Replace)</button>
+          <button class="sn-btn" id="copyBoxBtn">Copy Box</button>
+        </div>
+      </div>
+    </details>
+
+    <section>
+      <div id="grid" class="sn-grid"></div>
+    </section>
+
+    <footer class="sn-footer">
+      Parser is intentionally “best guess”. Your future LLM parser can output the same JSON contract and this UI will just work.
+    </footer>
+  </main>
+
+  <div id="toast" class="sn-toast" hidden></div>
+
+  <script>
+    const STORAGE_KEY = "stickyTodos.v1";
+
+    const grid = document.getElementById("grid");
+    const mdInput = document.getElementById("mdInput");
+    const ioBox = document.getElementById("ioBox");
+    const toastEl = document.getElementById("toast");
+
+    let state = loadState();
+    let index = new Map();
+
+    // ---------- Utilities ----------
+    function nowISO(){ return new Date().toISOString(); }
+
+    function randomId16(){
+      const buf = new Uint8Array(8);
+      crypto.getRandomValues(buf);
+      return [...buf].map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function hueFromId(id){
+      let h = 0;
+      for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      return h % 360;
+    }
+
+    function pad2(n){ return String(n).padStart(2, "0"); }
+
+    function isoToLocalValue(iso){
+      if (!iso) return "";
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function localValueToISO(localValue){
+      // localValue = "YYYY-MM-DDTHH:MM"
+      const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(localValue);
+      if (!m) return null;
+      const y = Number(m[1]), mo = Number(m[2]) - 1, da = Number(m[3]);
+      const h = Number(m[4]), mi = Number(m[5]);
+      const d = new Date(y, mo, da, h, mi, 0, 0); // local
+      return d.toISOString();
+    }
+
+    function fmtLocal(iso){
+      if (!iso) return "";
+      const d = new Date(iso);
+      return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+    }
+
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.hidden = false;
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(() => { toastEl.hidden = true; }, 1400);
+    }
+
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        toast("Copied");
+      }catch(err){
+        // fallback (works in more contexts; deprecated but practical)
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        toast("Copied");
+      }
+    }
+
+    function walkTasks(tasks, fn){
+      for (const t of tasks){
+        fn(t);
+        if (t.children?.length) walkTasks(t.children, fn);
+      }
+    }
+
+    function rebuildIndex(){
+      index = new Map();
+      walkTasks(state.items, (t) => index.set(t.id, t));
+    }
+
+    function findTask(id){ return index.get(id) || null; }
+
+    function saveState(){
+      state.updatedAt = nowISO();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw){
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.version === 1 && Array.isArray(parsed.items)) return parsed;
+        }
+      }catch(e){}
+      return { version: 1, createdAt: nowISO(), updatedAt: nowISO(), items: [] };
+    }
+
+    // ---------- Parsing (forgiving, best-guess) ----------
+    function splitLoose(input){
+      const s = (input ?? "").trim();
+      if (!s) return [];
+      if (s.includes("\n")) return s.split(/\n+/);
+      if (s.includes(",")) return s.split(/\s*,\s*/);
+      return [s];
+    }
+
+    function parseLine(line){
+      const raw = String(line ?? "");
+      let s = raw.replace(/\t/g, "  ");
+      const spaces = (s.match(/^(\s+)/)?.[1]?.length) ?? 0;
+      const level = Math.floor(spaces / 2);
+      s = s.trim();
+      if (!s) return null;
+
+      // checkbox forms:
+      // "- [ ]", "- [x]", "-[ ]", "-[x]"
+      let checked = false;
+      let isTask = false;
+      let prefixLen = 0;
+
+      const m1 = /^[-*+]\s*\[\s*([xX])?\s*\]\s*/.exec(s);
+      const m2 = /^-\[\s*([xX])?\s*\]\s*/.exec(s);
+
+      if (m1){ isTask = true; checked = !!m1[1]; prefixLen = m1[0].length; }
+      else if (m2){ isTask = true; checked = !!m2[1]; prefixLen = m2[0].length; }
+      else if (/^[-*+]\s+/.test(s)){ isTask = true; checked = false; prefixLen = s.match(/^[-*+]\s+/)[0].length; }
+
+      if (isTask) s = s.slice(prefixLen);
+
+      // tags / assignees
+      const tags = [...s.matchAll(/(^|\s)#([a-zA-Z0-9][\w\-\/]*)/g)].map(m => m[2]);
+      const assignees = [...s.matchAll(/(^|\s)@([a-zA-Z0-9][\w\-]*)/g)].map(m => m[2]);
+
+      // due detection
+      let dueAt = null;
+      const dueRe = /\b(?:due|deadline|by)\s*[:=]?\s*(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?\b/i;
+      const dm = dueRe.exec(s);
+      if (dm){
+        const date = dm[1];
+        const time = (dm[2] ?? "23:59").padStart(5, "0");
+        dueAt = localValueToISO(`${date}T${time}`);
+      } else {
+        // fallback: bare ISO-ish date anywhere
+        const bare = /\b(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?\b/.exec(s);
+        if (bare){
+          const date = bare[1];
+          const time = (bare[2] ?? "23:59").padStart(5, "0");
+          dueAt = localValueToISO(`${date}T${time}`);
+        }
+      }
+
+      // remove recognized tokens from the displayed text (raw is preserved separately)
+      let text = s;
+      text = text.replace(dueRe, " ");
+      text = text.replace(/(^|\s)#[a-zA-Z0-9][\w\-\/]*/g, " ");
+      text = text.replace(/(^|\s)@[a-zA-Z0-9][\w\-]*/g, " ");
+      text = text.replace(/\s{2,}/g, " ").trim();
+
+      const id = randomId16();
+      const tNow = nowISO();
+
+      const task = {
+        id,
+        createdAt: tNow,
+        updatedAt: tNow,
+        raw: raw.trimEnd(),
+        text: text || "(blank)",
+        checked,
+        dueAt,
+        assignees,
+        tags,
+        notes: "",
+        children: [],
+        hue: hueFromId(id),
+      };
+
+      return { level, task };
+    }
+
+    function parseMarkdownToTree(input){
+      const lines = splitLoose(input).map(l => l.replace(/\r/g, "")).filter(l => l.trim().length);
+      const roots = [];
+      const stack = []; // { level, task }
+
+      for (const line of lines){
+        const parsed = parseLine(line);
+        if (!parsed) continue;
+
+        const { level, task } = parsed;
+
+        while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
+
+        if (!stack.length) roots.push(task);
+        else stack[stack.length - 1].task.children.push(task);
+
+        stack.push({ level, task });
+      }
+      return roots;
+    }
+
+    // ---------- Markdown export ----------
+    function taskToMarkdown(task, indent=0){
+      const pad = "  ".repeat(indent);
+      const box = task.checked ? "[x]" : "[ ]";
+      let line = `${pad}- ${box} ${task.text}`;
+
+      if (task.dueAt){
+        line += ` due:${isoToLocalValue(task.dueAt).replace("T", " ")}`;
+      }
+      if (task.assignees?.length){
+        line += " " + task.assignees.map(a => "@" + a).join(" ");
+      }
+      if (task.tags?.length){
+        line += " " + task.tags.map(t => "#" + t).join(" ");
+      }
+
+      const out = [line];
+      for (const c of (task.children ?? [])){
+        out.push(taskToMarkdown(c, indent + 1));
+      }
+      return out.join("\n");
+    }
+
+    // ---------- Rendering (HTML output is span-wrapped) ----------
+    function pill(text, className){
+      const sp = document.createElement("span");
+      sp.className = "sn-pill " + (className || "");
+      sp.textContent = text;
+      return sp;
+    }
+
+    function render(){
+      rebuildIndex();
+      grid.innerHTML = "";
+
+      if (!state.items.length){
+        const empty = document.createElement("div");
+        empty.style.opacity = "0.8";
+        empty.style.padding = "10px 2px";
+        empty.textContent = "No notes yet. Import markdown or click “+ Note”.";
+        grid.appendChild(empty);
+        return;
+      }
+
+      for (const root of state.items){
+        grid.appendChild(renderCard(root));
+      }
+    }
+
+    function renderSubtasks(children, depth){
+      const wrap = document.createElement("span");
+      wrap.className = "sn-subtasks";
+
+      for (const t of (children ?? [])){
+        const row = document.createElement("span");
+        row.className = "sn-sub";
+        row.dataset.id = t.id;
+        row.style.setProperty("--sn-indent", String(depth));
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "sn-check";
+        cb.checked = !!t.checked;
+
+        const tx = document.createElement("span");
+        tx.className = "sn-text";
+        tx.contentEditable = "plaintext-only";
+        tx.spellcheck = false;
+        tx.textContent = t.text;
+
+        row.appendChild(cb);
+        row.appendChild(tx);
+        wrap.appendChild(row);
+
+        if (t.children?.length){
+          wrap.appendChild(renderSubtasks(t.children, depth + 1));
+        }
+      }
+
+      return wrap;
+    }
+
+    function renderCard(task){
+      const card = document.createElement("span");
+      card.className = "sn-card";
+      card.dataset.id = task.id;
+      card.style.setProperty("--sn-hue", String(task.hue ?? hueFromId(task.id)));
+
+      // top row
+      const top = document.createElement("div");
+      top.className = "sn-top";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "sn-check";
+      cb.checked = !!task.checked;
+
+      const tx = document.createElement("span");
+      tx.className = "sn-text";
+      tx.contentEditable = "plaintext-only";
+      tx.spellcheck = false;
+      tx.textContent = task.text;
+
+      const kebab = document.createElement("button");
+      kebab.className = "sn-kebab";
+      kebab.type = "button";
+      kebab.textContent = "⋯";
+      kebab.title = "Expand";
+
+      top.appendChild(cb);
+      top.appendChild(tx);
+      top.appendChild(kebab);
+
+      // meta pills
+      const meta = document.createElement("div");
+      meta.className = "sn-meta";
+
+      if (task.dueAt) meta.appendChild(pill("⏳ " + fmtLocal(task.dueAt), "sn-due"));
+      for (const a of (task.assignees ?? [])) meta.appendChild(pill("@" + a, "sn-assignee"));
+      for (const t of (task.tags ?? [])) meta.appendChild(pill("#" + t, "sn-tag"));
+
+      // subtasks
+      const subtasks = (task.children?.length)
+        ? renderSubtasks(task.children, 0)
+        : null;
+
+      // details panel
+      const details = document.createElement("div");
+      details.className = "sn-details";
+      details.hidden = true;
+
+      details.appendChild(field("Due (datetime-local)", "datetime-local", isoToLocalValue(task.dueAt), "due"));
+      details.appendChild(field("Assignees (space or comma separated)", "text", (task.assignees ?? []).join(" "), "assignees"));
+      details.appendChild(field("Tags (space or comma separated, no # needed)", "text", (task.tags ?? []).join(" "), "tags"));
+      details.appendChild(fieldArea("Notes", task.notes ?? "", "notes"));
+
+      const sys = document.createElement("div");
+      sys.className = "sn-sys";
+      sys.innerHTML = `
+        <div>ID: ${task.id}</div>
+        <div>Created: ${fmtLocal(task.createdAt)}</div>
+        <div>Updated: ${fmtLocal(task.updatedAt)}</div>
+        <div style="opacity:.9">Raw: ${escapeHTML(task.raw ?? "")}</div>
+      `;
+      details.appendChild(sys);
+
+      const actions = document.createElement("div");
+      actions.className = "sn-row";
+      actions.style.marginTop = "2px";
+
+      const addSub = actionBtn("Add subtask", "add-sub");
+      const copyMd = actionBtn("Copy markdown", "copy-md");
+      const del = actionBtn("Delete", "delete");
+      actions.appendChild(addSub);
+      actions.appendChild(copyMd);
+      actions.appendChild(del);
+      details.appendChild(actions);
+
+      card.appendChild(top);
+      if (meta.childNodes.length) card.appendChild(meta);
+      if (subtasks) card.appendChild(subtasks);
+      card.appendChild(details);
+
+      return card;
+    }
+
+    function actionBtn(label, action){
+      const b = document.createElement("button");
+      b.className = "sn-btn";
+      b.type = "button";
+      b.dataset.action = action;
+      b.textContent = label;
+      return b;
+    }
+
+    function field(label, type, value, key){
+      const wrap = document.createElement("div");
+      wrap.className = "sn-field";
+
+      const lab = document.createElement("label");
+      lab.textContent = label;
+
+      const input = document.createElement("input");
+      input.type = type;
+      input.value = value ?? "";
+      input.dataset.key = key;
+
+      wrap.appendChild(lab);
+      wrap.appendChild(input);
+      return wrap;
+    }
+
+    function fieldArea(label, value, key){
+      const wrap = document.createElement("div");
+      wrap.className = "sn-field";
+
+      const lab = document.createElement("label");
+      lab.textContent = label;
+
+      const ta = document.createElement("textarea");
+      ta.value = value ?? "";
+      ta.dataset.key = key;
+
+      wrap.appendChild(lab);
+      wrap.appendChild(ta);
+      return wrap;
+    }
+
+    function escapeHTML(s){
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // ---------- Event delegation ----------
+    grid.addEventListener("click", async (e) => {
+      const card = e.target.closest("[data-id]");
+      if (!card) return;
+
+      const id = card.dataset.id;
+      const task = findTask(id);
+      if (!task) return;
+
+      if (e.target.classList.contains("sn-kebab")){
+        const panel = card.querySelector(".sn-details");
+        panel.hidden = !panel.hidden;
+        return;
+      }
+
+      const action = e.target?.dataset?.action;
+      if (!action) return;
+
+      if (action === "delete"){
+        deleteTaskById(id);
+        saveState();
+        render();
+        toast("Deleted");
+      }
+
+      if (action === "copy-md"){
+        await copyText(taskToMarkdown(task, 0));
+      }
+
+      if (action === "add-sub"){
+        const raw = prompt("Subtask (markdown line or plain text):");
+        if (!raw) return;
+        const line = /\[\s*([xX])?\s*\]/.test(raw) ? raw : `- [ ] ${raw}`;
+        const parsed = parseLine(line);
+        if (!parsed) return;
+        task.children = task.children ?? [];
+        task.children.push(parsed.task);
+        task.updatedAt = nowISO();
+        saveState();
+        render();
+        toast("Subtask added");
+      }
+    });
+
+    grid.addEventListener("change", (e) => {
+      const node = e.target.closest("[data-id]");
+      if (!node) return;
+      const id = node.dataset.id;
+      const task = findTask(id);
+      if (!task) return;
+
+      if (e.target.matches("input.sn-check")){
+        task.checked = e.target.checked;
+        task.updatedAt = nowISO();
+        saveState();
+        render();
+        return;
+      }
+
+      if (e.target.matches(".sn-details input, .sn-details textarea")){
+        const key = e.target.dataset.key;
+        if (!key) return;
+
+        if (key === "due"){
+          const v = e.target.value.trim();
+          task.dueAt = v ? localValueToISO(v) : null;
+        }
+        if (key === "assignees"){
+          task.assignees = normalizeList(e.target.value, { stripPrefix: "@" });
+        }
+        if (key === "tags"){
+          task.tags = normalizeList(e.target.value, { stripPrefix: "#" });
+        }
+        if (key === "notes"){
+          task.notes = e.target.value ?? "";
+        }
+
+        task.updatedAt = nowISO();
+        saveState();
+        render();
+      }
+    });
+
+    // contenteditable commit on blur
+    grid.addEventListener("blur", (e) => {
+      if (!e.target.matches("span.sn-text[contenteditable]")) return;
+
+      const node = e.target.closest("[data-id]");
+      if (!node) return;
+
+      const id = node.dataset.id;
+      const task = findTask(id);
+      if (!task) return;
+
+      const newText = (e.target.textContent ?? "").trim() || "(blank)";
+      if (task.text !== newText){
+        task.text = newText;
+        task.updatedAt = nowISO();
+        saveState();
+        render();
+      }
+    }, true);
+
+    function normalizeList(s, { stripPrefix } = {}){
+      const parts = String(s ?? "")
+        .split(/[,\s]+/g)
+        .map(x => x.trim())
+        .filter(Boolean)
+        .map(x => stripPrefix ? x.replace(new RegExp("^\\Q" + stripPrefix + "\\E"), "") : x)
+        .map(x => x.replace(/^[@#]/, ""));
+      // unique, keep order
+      const seen = new Set();
+      const out = [];
+      for (const p of parts){
+        if (!seen.has(p)){
+          seen.add(p);
+          out.push(p);
+        }
+      }
+      return out;
+    }
+
+    function deleteTaskById(id){
+      function delFrom(list){
+        const idx = list.findIndex(t => t.id === id);
+        if (idx >= 0){ list.splice(idx, 1); return true; }
+        for (const t of list){
+          if (t.children?.length && delFrom(t.children)) return true;
+        }
+        return false;
+      }
+      delFrom(state.items);
+      rebuildIndex();
+    }
+
+    // ---------- Top toolbar actions ----------
+    document.getElementById("addRootBtn").addEventListener("click", () => {
+      const raw = prompt("New note (markdown line or plain text):");
+      if (!raw) return;
+      const line = /\[\s*([xX])?\s*\]/.test(raw) ? raw : `- [ ] ${raw}`;
+      const parsed = parseLine(line);
+      if (!parsed) return;
+      state.items.push(parsed.task);
+      saveState();
+      render();
+      toast("Added");
+    });
+
+    document.getElementById("importReplaceBtn").addEventListener("click", () => {
+      const roots = parseMarkdownToTree(mdInput.value);
+      state.items = roots;
+      state.createdAt = state.createdAt || nowISO();
+      saveState();
+      render();
+      toast("Imported (replace)");
+    });
+
+    document.getElementById("importAppendBtn").addEventListener("click", () => {
+      const roots = parseMarkdownToTree(mdInput.value);
+      state.items.push(...roots);
+      saveState();
+      render();
+      toast("Imported (append)");
+    });
+
+    document.getElementById("loadSampleBtn").addEventListener("click", () => {
+      mdInput.value =
+`-[ ] Ship feature due:2026-02-01 14:00 @alex #work
+  - [ ] write spec
+  - [ ] implement
+  - [ ] test #qa
+-[x] Pay invoice #finance by 2026-01-30
+buy milk, call dentist due:2026-02-03 09:15 #home @me`;
+      toast("Sample loaded");
+    });
+
+    document.getElementById("exportJsonBtn").addEventListener("click", () => {
+      ioBox.value = JSON.stringify(state, null, 2);
+      toast("Exported to box");
+    });
+
+    document.getElementById("copyJsonBtn").addEventListener("click", async () => {
+      await copyText(JSON.stringify(state, null, 2));
+    });
+
+    document.getElementById("copyBoxBtn").addEventListener("click", async () => {
+      await copyText(ioBox.value || "");
+    });
+
+    document.getElementById("importJsonBtn").addEventListener("click", () => {
+      try{
+        const parsed = JSON.parse(ioBox.value);
+        if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.items)) throw new Error("Not v1 JSON");
+        state = parsed;
+        saveState();
+        render();
+        toast("Imported JSON");
+      }catch(err){
+        alert("JSON import failed: " + err.message);
+      }
+    });
+
+    document.getElementById("copyHtmlBtn").addEventListener("click", async () => {
+      // Copies only the rendered notes HTML (span-wrapped cards), not the whole app UI.
+      await copyText(grid.innerHTML);
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      if (!confirm("Clear localStorage for this app?")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = { version: 1, createdAt: nowISO(), updatedAt: nowISO(), items: [] };
+      render();
+      toast("Cleared");
+    });
+
+    // initial render
+    render();
+  </script>
+</body>
+</html>
