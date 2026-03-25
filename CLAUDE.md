@@ -6,11 +6,12 @@ Context and conventions for AI assistants working in this repository.
 
 ## What this repo is
 
-Personal portfolio and web experiment lab for Konrad Persson, a Swedish digital consultant. It combines:
+Personal portfolio and web experiment lab for Konrad Persson, a Swedish digital consultant. It has two distinct parts:
 
-1. **Main portfolio site** (`index.html` + `/css/` + `/js/`) — professional landing page in Swedish
-2. **Busy** (`/busy/`) — a PWA playground for "Looking Busy" UI/UX experiments
-3. **Standalone tools** (`/vcard/`, `/kontakt/`, `/login/`, etc.) — various mini-apps and prototypes
+1. **Main portfolio site** (root) — `index.html`, `/css/`, `/js/` — professional landing page in Swedish, hosted at `konradpersson.se`
+2. **Demo projects** (`/demo/`) — independent mini-apps and experiments, each intended to be served as a subdomain (e.g. `busy.konradpersson.se`)
+
+These two parts are largely independent. If asked to work on a demo project, stay inside `/demo/` and do not touch the main site, and vice versa.
 
 ---
 
@@ -18,8 +19,8 @@ Personal portfolio and web experiment lab for Konrad Persson, a Swedish digital 
 
 - **Vanilla HTML, CSS, JavaScript only** — no React, no Vue, no frameworks
 - **No build tools** — no webpack, Vite, Babel, TypeScript, or npm
-- **No backend** — pure static files deployed via FTP
-- **External deps via CDN only** when genuinely needed (e.g. Tesseract.js in `/vcard/`)
+- **No backend** — pure static files served via GitHub Pages
+- **External deps via CDN only** when genuinely needed
 - **Target:** Chrome latest (desktop + Android); no polyfills, no vendor prefixes
 - **ES6+** — arrow functions, const/let, modules, spread, etc.
 
@@ -33,23 +34,28 @@ Personal portfolio and web experiment lab for Konrad Persson, a Swedish digital 
 ├── css/styles.css          Site-wide design tokens and responsive styles
 ├── js/components.js        Web Components: SiteHeader, SiteNav, SiteFooter
 ├── js/common.js            IntersectionObserver for scroll-reveal animations
-├── .github/workflows/      CI/CD (FTP deploy on push to main)
+├── CNAME                   Custom domain for GitHub Pages (konradpersson.se)
+├── .github/workflows/      CI/CD (GitHub Pages deploy on push to main)
 │
-├── busy/                   PWA playground (see below)
-├── vcard/                  Contact OCR tool (Share Target API, Tesseract.js)
-├── kontakt/                Contact form + thank-you page
-├── login/                  Retro terminal-style login UI
-├── stickynote/             Sticky note app
-├── notepad/, notepad-x/    Notepad experiments
-├── boilerplate/            Starter template for new projects
-└── [other mini-projects]/  chickenkiev, coin, colors, demo, dominionT,
-                            fullscreen, grilla, hemskärm, holmes, julkalkon,
-                            nfc, severd, skinka, slaphone, slaptop
+└── demo/                   All demo projects (see demo/CLAUDE.md)
+    ├── busy/
+    ├── vcard/
+    ├── kontakt/
+    ├── login/
+    └── [more projects...]
 ```
 
 ---
 
-## Design system (main site)
+## Demo projects
+
+All demo projects live under `/demo/`. Each is self-contained and intended to eventually be available as a subdomain (e.g. `busy.konradpersson.se`). They have nothing to do with each other.
+
+See `/demo/CLAUDE.md` for conventions that apply to demo projects. Each demo project should also have its own `CLAUDE.md` explaining what it does.
+
+---
+
+## Main site design system
 
 CSS custom properties defined in `/css/styles.css`:
 
@@ -61,38 +67,37 @@ CSS custom properties defined in `/css/styles.css`:
 
 ---
 
-## Busy project conventions
-
-`/busy/` is a self-contained PWA with its own rules:
-
-- **Append-only files**: `pages.json`, `busy-common.css`, `busy-common.js` — never remove or reorder existing entries
-- **Self-contained pages**: each page is a single HTML file under `busy/pages/`
-- **Dark theme**: background `#0b0d10`, text `#e9eef6`, muted `#9aa7b6`
-- **localStorage only** — never send data anywhere
-- **No ARIA labels, no polyfills, no prefixes** — "works in Chrome" is the only standard
-
-### Adding a new Busy page
-
-1. Copy `busy/pages/template.html` → `busy/pages/NNN-your-page.html`
-2. Append to `busy/pages.json` (append-only):
-   ```json
-   { "id": "NNN", "title": "Your Page Title", "path": "pages/NNN-your-page.html", "tags": [] }
-   ```
-3. Optionally include `../busy-common.css` and/or `../busy-common.js` in the page
-
----
-
 ## Deployment
 
 Automated via GitHub Actions on push to `main`:
 
 - **Workflow:** `.github/workflows/deploy.yml`
-- **Method:** FTPS (SamKirkland/FTP-Deploy-Action)
-- **Secrets required:** `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`
-- **Exclusions:** `.git*`, `node_modules/**`, `.ftp-deploy-sync-state.json`
-- Only one deployment runs at a time (concurrency group per ref)
+- **Method:** GitHub Pages (actions/deploy-pages)
+- **Custom domain:** `konradpersson.se` (defined in `CNAME`)
+- **DNS setup required at templ.io** (see below)
 
-There is no staging environment. Pushing to `main` = live.
+### DNS configuration (templ.io)
+
+To point `konradpersson.se` to GitHub Pages, configure these DNS records:
+
+**A records for apex domain (`@`):**
+```
+185.199.108.153
+185.199.109.153
+185.199.110.153
+185.199.111.153
+```
+
+**CNAME for `www`:**
+```
+www → konradperssonse.github.io
+```
+
+**GitHub repo settings:** Enable GitHub Pages under Settings → Pages, set source to "GitHub Actions", and add `konradpersson.se` as the custom domain.
+
+### Subdomain routing for demos
+
+Serving demos as subdomains (e.g. `busy.konradpersson.se`) requires DNS + routing configuration beyond what GitHub Pages alone provides. This is planned for the future and will likely require a CDN or reverse proxy layer on top of GitHub Pages.
 
 ---
 
@@ -122,11 +127,9 @@ There is no staging environment. Pushing to `main` = live.
 - Do not introduce npm, a package manager, or a build step
 - Do not add a framework (React, Vue, Svelte, etc.)
 - Do not add polyfills or vendor prefixes
-- Do not send data to any external service from Busy pages
-- Do not remove or reorder entries in `pages.json`, `busy-common.css`, or `busy-common.js`
-- Do not create unnecessary abstraction layers or utilities for one-off use
 - Do not add tests (there is no test infrastructure)
 - Do not add linting config unless explicitly requested
+- Do not modify demo projects when working on the main site, and vice versa
 
 ---
 
@@ -138,11 +141,7 @@ There is no staging environment. Pushing to `main` = live.
 | `css/styles.css` | Site-wide CSS custom properties and layout |
 | `js/components.js` | Web Components (SiteHeader, SiteNav, SiteFooter) |
 | `js/common.js` | Scroll-reveal via IntersectionObserver |
-| `busy/index.html` | Busy app shell + embedded AI base prompt |
-| `busy/pages.json` | Page registry (append-only) |
-| `busy/busy-common.js` | Navigation injection + clipboard helper |
-| `busy/busy-common.css` | Busy dark theme design system |
-| `busy/sw.js` | PWA service worker |
-| `vcard/app.js` | Contact OCR app logic |
-| `vcard/sw.js` | Service Worker with Share Target API |
-| `.github/workflows/deploy.yml` | FTP deploy on push to main |
+| `CNAME` | Custom domain declaration for GitHub Pages |
+| `.github/workflows/deploy.yml` | GitHub Pages deploy on push to main |
+| `demo/` | All demo projects (independent of main site) |
+| `demo/CLAUDE.md` | Conventions for demo projects |
