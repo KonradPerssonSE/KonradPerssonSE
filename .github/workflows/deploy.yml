@@ -1,38 +1,36 @@
-name: Deploy to FTP (production)
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch: {}
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
-
-concurrency:
-  group: "deploy-${{ github.ref }}"
-  cancel-in-progress: true
+  pages: write
+  id-token: write
 
 jobs:
-  ftp-deploy:
-    name: Upload site over FTPS
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    environment: production
-
     steps:
-      - name: Check out source code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Sync files
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          server:       ${{ secrets.FTP_SERVER }}
-          protocol:     ftps
-          username:     ${{ secrets.FTP_USERNAME }}
-          password:     ${{ secrets.FTP_PASSWORD }}
-          # server-dir:   ./
-          # local-dir: ./dist/
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            .ftp-deploy-sync-state.json
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
